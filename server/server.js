@@ -15,9 +15,31 @@ const app = express();
 
 // 1. Security & Header Middlewares
 app.use(helmet());
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://staywise.ai',
+  'https://staywise-52dr.onrender.com'
+];
+
+if (process.env.ALLOWED_ORIGINS) {
+  const envOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+  allowedOrigins.push(...envOrigins);
+}
+
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'https://staywise.ai'],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, or postman)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+        return callback(null, true);
+      }
+      
+      return callback(new Error('CORS policy violation'), false);
+    },
     credentials: true,
   })
 );
