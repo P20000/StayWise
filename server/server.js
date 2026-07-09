@@ -34,7 +34,9 @@ app.use(
       // Allow requests with no origin (like mobile apps, curl, or postman)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+      const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+      
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com') || isLocalhost) {
         return callback(null, true);
       }
       
