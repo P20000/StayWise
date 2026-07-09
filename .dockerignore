@@ -1,0 +1,40 @@
+# Secrets — NEVER bake into image
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Dependencies (rebuilt in Docker)
+node_modules
+client/node_modules
+server/node_modules
+
+# Build artifacts
+client/dist
+client/out
+server/dist
+build
+
+# IDE & OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Git & Docs
+.git
+.gitignore
+docs/
+*.md
+
+# Docker itself
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Testing & logs
+coverage
+.nyc_output
+*.log
+npm-debug.log

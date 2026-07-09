@@ -1,0 +1,100 @@
+# ============================================
+# StayWise.ai — LOCAL DEVELOPMENT ONLY
+# DO NOT use this file for Render production deployment
+# ============================================
+
+services:
+  # ─── Tier 1: Frontend ───
+  frontend:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: staywise-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - staywise-network
+    restart: unless-stopped
+
+  # ─── Tier 2: Backend API ───
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: staywise-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGO_URI=mongodb://staywise:staywise_dev@mongodb:27017/staywise?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - JWT_PRIVATE_SECRET=${JWT_PRIVATE_SECRET:-dev_secret_change_in_prod}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+    env_file:
+      - server/.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - staywise-network
+    restart: unless-stopped
+
+  # ─── Tier 3: MongoDB (LOCAL ONLY) ───
+  mongodb:
+    image: mongo:7
+    container_name: staywise-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=staywise
+      - MONGO_INITDB_ROOT_PASSWORD=staywise_dev
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - staywise-network
+    restart: unless-stopped
+
+  # ─── Tier 4: Redis (LOCAL ONLY) ───
+  redis:
+    image: redis:7-alpine
+    container_name: staywise-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - staywise-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  staywise-network:
+    driver: bridge

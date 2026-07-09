@@ -1,0 +1,30 @@
+# render.yaml — Render Blueprint (production orchestration)
+# This is NOT docker-compose. It's Render's native service definition.
+
+services:
+  - type: web
+    name: staywise-backend
+    env: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false  # Injected manually in dashboard
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_PRIVATE_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
