@@ -1,22 +1,18 @@
 import React from 'react';
-import { ScrollProgressIndicator } from '../components/landing/ScrollProgressIndicator';
 import { CinematicHero } from '../components/landing/CinematicHero';
-import { SmartStayRecommender } from '../components/landing/SmartStayRecommender';
+import { ValueProps } from '../components/landing/ValueProps';
 import { FeaturedHotels } from '../components/landing/FeaturedHotels';
 
 export const LandingPage = () => {
   return (
-    <main className="w-full min-h-screen bg-[#F1EDEA] overflow-x-hidden">
-      {/* Top scroll tracking progress indicator */}
-      <ScrollProgressIndicator />
-
-      {/* 300vh Pinned Cinematic Video Hero Container */}
+    <main className="w-full min-h-screen overflow-x-hidden">
+      {/* Looping Cinematic Video Hero */}
       <CinematicHero />
 
-      {/* SmartStay AI Recommender Engine Section */}
-      <SmartStayRecommender />
+      {/* Guest and Host Value Showcase */}
+      <ValueProps />
 
-      {/* Featured Architectural Suites Section */}
+      {/* Featured Spaces Showcase */}
       <FeaturedHotels />
     </main>
   );

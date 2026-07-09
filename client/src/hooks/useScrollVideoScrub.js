@@ -6,7 +6,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 export const useScrollVideoScrub = (videoRef, containerRef) => {
   useEffect(() => {
-    // 1. Accessibility Check: Exit early if reduced motion is preferred
+    // Accessibility: skip animation for reduced-motion users
     if (
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -18,16 +18,17 @@ export const useScrollVideoScrub = (videoRef, containerRef) => {
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // 2. Setup Function: Binds GSAP context and timeline
     const setup = () => {
       const ctx = gsap.context(() => {
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: container,
             start: 'top top',
-            end: '+=200%',          // 300vh total pin distance (100vh + 200vh scroll)
+            // ~10 scroll ticks to complete (80vh ≈ 10 × ~80px wheel steps)
+            end: '+=80vh',
             pin: true,
-            scrub: 0.5,             // 0.5s smoothing for cinematic feel
+            // Tight scrub for frame-accurate, smooth video response
+            scrub: 0.15,
             anticipatePin: 1,
           },
         });
@@ -38,19 +39,14 @@ export const useScrollVideoScrub = (videoRef, containerRef) => {
         });
       }, container);
 
-      // Return cleanup handler to revert all GSAP DOM mutations and scroll listeners
       return () => ctx.revert();
     };
 
-    // 3. Execution based on Video Metadata Readiness
     if (video.readyState >= 1) {
       return setup();
     }
 
-    const handleMetadata = () => {
-      setup();
-    };
-
+    const handleMetadata = () => setup();
     video.addEventListener('loadedmetadata', handleMetadata, { once: true });
     return () => {
       video.removeEventListener('loadedmetadata', handleMetadata);

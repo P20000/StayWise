@@ -72,6 +72,17 @@ const roomSchema = new mongoose.Schema(
       type: [Number],
       default: [0.9, 0.8, 0.9, 0.4],
     },
+    locationCoordinates: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [139.7016, 35.6580], // default Shibuya Tokyo
+      },
+    },
   },
   {
     timestamps: true,
@@ -80,5 +91,6 @@ const roomSchema = new mongoose.Schema(
 
 // Text indexes for fast location and style querying
 roomSchema.index({ location: 'text', title: 'text', architecturalStyle: 'text' });
+roomSchema.index({ locationCoordinates: '2dsphere' });
 
 module.exports = mongoose.model('Room', roomSchema);

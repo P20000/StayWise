@@ -5,13 +5,19 @@ import { logoutUser } from '../../store/slices/authSlice';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Building2, User, LogOut } from 'lucide-react';
+import api from '../../services/api';
 
 export const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    }
     dispatch(logoutUser());
     navigate('/');
   };
@@ -33,31 +39,51 @@ export const Navbar = () => {
               STAYWISE.AI
             </span>
             <span className="font-mono text-[9px] uppercase tracking-widest text-[#C84B31] font-semibold">
-              [ ARCHITECTURAL STAYS ]
+              Architectural Stays
             </span>
           </div>
         </Link>
 
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 font-mono text-xs uppercase tracking-wider font-bold">
-          <Link
-            to="/explore"
-            className="text-[#212121] hover:text-[#C84B31] transition-colors py-1"
-          >
-            [ EXPLORE SUITES ]
-          </Link>
-          <Link
-            to="/recommender"
-            className="text-[#212121] hover:text-[#C84B31] transition-colors py-1 flex items-center gap-1"
-          >
-            <span>[ AI RECOMMENDER ]</span>
-            <span className="text-[10px]" role="img" aria-label="Sparkles">✨</span>
-          </Link>
+          {!(isAuthenticated && user?.role === 'Vendor') && (
+            <Link
+              to="/explore"
+              className="text-[#212121] hover:text-[#C84B31] transition-colors py-1"
+            >
+              Explore Stays
+            </Link>
+          )}
+          {!(isAuthenticated && user?.role === 'Vendor') && (
+            <Link
+              to="/recommender"
+              className="text-[#212121] hover:text-[#C84B31] transition-colors py-1 flex items-center gap-1"
+            >
+              <span>AI Picks</span>
+              <span className="text-[10px]" role="img" aria-label="Sparkles">✨</span>
+            </Link>
+          )}
+          {isAuthenticated && user?.role === 'Vendor' && (
+            <>
+              <Link
+                to="/vendor/dashboard"
+                className="text-[#C84B31] hover:text-[#212121] transition-colors py-1"
+              >
+                My Listings
+              </Link>
+              <Link
+                to="/vendor/setup"
+                className="text-[#C84B31] hover:text-[#212121] transition-colors py-1"
+              >
+                Setup Location
+              </Link>
+            </>
+          )}
           <Link
             to="/about"
             className="text-[#212121] hover:text-[#C84B31] transition-colors py-1"
           >
-            [ ARCHITECTURE ]
+            About
           </Link>
         </nav>
 
@@ -83,12 +109,12 @@ export const Navbar = () => {
             <div className="flex items-center gap-2">
               <Link to="/auth?mode=login">
                 <Button variant="secondary" size="sm">
-                  SIGN IN
+                  Sign In
                 </Button>
               </Link>
               <Link to="/auth?mode=register" className="hidden sm:inline-block">
                 <Button variant="primary" size="sm">
-                  RESERVE
+                  Get Started
                 </Button>
               </Link>
             </div>

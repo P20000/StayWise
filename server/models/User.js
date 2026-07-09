@@ -35,11 +35,19 @@ const userSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
+    vendorLocation: {
+      address: { type: String },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+      },
+    },
   },
   {
     timestamps: true,
   }
 );
+
+userSchema.index({ 'vendorLocation.coordinates': '2dsphere' });
 
 // Hash password before saving to MongoDB
 userSchema.pre('save', async function (next) {

@@ -18,13 +18,13 @@ export const Footer = () => {
               </span>
             </div>
             <p className="font-sans text-sm text-[#F1EDEA]/80 max-w-md leading-relaxed">
-              Architectural Stays in Motion. The world's first scroll-scrubbed,
-              AI-curated hospitality platform designed around Elevated Brutalism and
-              stateless high-concurrency performance.
+              Architectural Stays in Motion. A premium guest and host community
+              designed around Elevated Brutalism, bespoke hospitality, and
+              seamless, design-forward travel experiences.
             </p>
             <div className="flex items-center gap-2 pt-2 font-mono text-xs text-[#C84B31]">
-              <Terminal size={14} />
-              <span>[ STATELESS EDGE ENGINE — 60FPS CERTIFIED ]</span>
+              <Building2 size={14} />
+              <span>[ THE ART OF HOSPITALITY & DESIGN ]</span>
             </div>
           </div>
 
@@ -60,27 +60,27 @@ export const Footer = () => {
           {/* Operational Compliance */}
           <div className="space-y-3">
             <h4 className="font-mono text-xs uppercase tracking-widest font-bold text-[#C84B31]">
-              [ ARCHITECTURE & LAB ]
+              [ PARTNERS & HOSTS ]
             </h4>
             <ul className="space-y-2 font-mono text-xs uppercase text-[#F1EDEA]/80">
               <li className="flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-[#C84B31]" />
-                <span>Stateless JWT Auth</span>
+                <span>Secure Guest Accounts</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-[#C84B31]" />
-                <span>Redis Distributed Lock</span>
+                <span>Instant Confirmations</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <ShieldCheck size={14} className="text-[#C84B31]" />
-                <span>WCAG 2.2 SC 2.3.3 Compliant</span>
+                <span>Universal Access Design</span>
               </li>
               <li className="pt-2">
                 <Link
-                  to="/docs"
+                  to="/vendor/setup"
                   className="inline-block bg-[#F1EDEA] text-[#212121] px-2 py-1 border border-[#212121] font-bold hover:bg-[#C84B31] hover:text-white transition-colors"
                 >
-                  SYSTEM REGISTRY →
+                  BECOME A HOST →
                 </Link>
               </li>
             </ul>

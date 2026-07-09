@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
     preferredDestinations: [{ type: String }],
     maxBudget: { type: Number, default: 10000 },
     favoriteAmenities: [{ type: String }]
+  },
+  vendorLocation: {
+    address: { type: String },
+    coordinates: { type: [Number], index: '2dsphere' } // [longitude, latitude]
   }
 }, { timestamps: true, optimisticConcurrency: true });
 
@@ -68,11 +72,18 @@ const roomSchema = new mongoose.Schema({
   reviewsCount: { type: Number, default: 0 },
   smartStayScore: { type: Number, default: 0.85 }, // Algorithmic match index
   
+  // Geospatial Indexes
+  locationCoordinates: {
+    type: { type: String, enum: ['Point'], default: 'Point' },
+    coordinates: { type: [Number], required: true } // [longitude, latitude]
+  },
+  
   // Atomic Availability & Overlap Array
   bookedSlots: [bookedSlotSchema]
 }, { timestamps: true, optimisticConcurrency: true });
 
-// Compound Indexes for High-Speed Marketplace Filtering
+// Compound and Geospatial Indexes for High-Speed Marketplace Filtering
+roomSchema.index({ locationCoordinates: '2dsphere' });
 roomSchema.index({ destination: 1, concessionPrice: 1, maxGuests: 1 });
 roomSchema.index({ 'bookedSlots.checkIn': 1, 'bookedSlots.checkOut': 1 });
 roomSchema.index({ rating: -1, reviewsCount: -1 });
@@ -103,8 +114,7 @@ const bookingSchema = new mongoose.Schema({
   
   gateway: { type: String, enum: ['STRIPE', 'RAZORPAY'], required: true },
   paymentIntentId: { type: String, required: true, unique: true, index: true },
-  
-  status: {
+    status: {
     type: String,
     enum: ['AWAITING_WEBHOOK', 'CONFIRMED', 'CANCELLED', 'REFUNDED'],
     default: 'AWAITING_WEBHOOK',
@@ -112,6 +122,20 @@ const bookingSchema = new mongoose.Schema({
     index: true
   }
 }, { timestamps: true, optimisticConcurrency: true });
+```
+---
+### `reviews` Collection
+Stores guest reviews and ratings mapped directly to listed rooms. Updates room's average rating aggregates upon creation.
+```javascript
+const reviewSchema = new mongoose.Schema({
+  room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true, index: true },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rating: { type: Number, required: true, min: 1, max: 5 },
+  comment: { type: String, required: true, trim: true }
+}, { timestamps: true });
+
+// Compound index to speed up reviews loading by room
+reviewSchema.index({ room: 1, createdAt: -1 });
 ```
 ---
 ## 2. Concurrency Control Strategy

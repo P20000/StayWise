@@ -2,6 +2,11 @@
 All changes to the StayWise codebase and documentation are tracked in this file.
 ---
 date: 2026-07-09
+what changed : Implemented Dynamic Rooms CRUD, Geolocation Tracking, and Feedback Review Engine (Feature 3). Refactored user and room mongoose schemas to support 2dsphere indexing. Created backend review aggregate logic and endpoints. Updated frontend to connect to real auth register/login/session endpoints, implemented OpenStreetMap autocomplete and HTML5 GPS geolocation tracking in Vendor Setup, added room CRUD in Vendor Dashboard, and added reviews section in Room Details.
+what files changed : `server/models/Room.js`, `server/models/User.js`, `server/controllers/roomController.js`, `server/routes/roomRoutes.js`, `server/controllers/userController.js`, `server/controllers/reviewController.js`, `server/routes/reviewRoutes.js`, `server/server.js`, `client/src/pages/AuthPage.jsx`, `client/src/components/layout/Navbar.jsx`, `client/src/pages/VendorSetupPage.jsx`, `client/src/pages/VendorDashboardPage.jsx`, `client/src/pages/ExplorePage.jsx`, `client/src/components/landing/FeaturedHotels.jsx`, `client/src/pages/RoomDetailsPage.jsx`, `client/src/App.jsx`, `docs/DATABASE_SCHEMA.md`, `docs/API_REFERENCE.md`
+why changed : To fulfill Feature 3 requirements: scraper-free dynamic stays listings from MongoDB, HTML5 vendor geolocation hub setup, proximity-based query sorting, full vendor room CRUD, and review-rating integration.
+---
+date: 2026-07-09
 what changed : Implemented the full Docker development configurations and production-grade Render blueprints. Created multi-stage client and server Dockerfiles, local docker-compose configurations, and production render.yaml specifications. Added root Dockerfile wrapper to support manual Render service builds. Added environment safeguards to the database config to output clear fatal messages when MONGO_URI is missing in production.
 what files changed : `Dockerfile`, `client/Dockerfile`, `client/nginx.conf`, `server/Dockerfile`, `server/config/db.js`, `docker-compose.yml`, `.dockerignore`, `render.yaml`
 why changed : To satisfy Feature 2 deployment architecture, support both manual Dashboard and blueprint-based Render deployments, and prevent cryptic DB connection errors by notifying the user immediately when required production variables are not configured.

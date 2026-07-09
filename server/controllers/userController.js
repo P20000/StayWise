@@ -2,12 +2,15 @@ const User = require('../models/User');
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, aiPreferenceVector } = req.body;
+    const { name, aiPreferenceVector, vendorLocation } = req.body;
 
     const fieldsToUpdate = {};
     if (name) fieldsToUpdate.name = name;
     if (aiPreferenceVector && Array.isArray(aiPreferenceVector)) {
       fieldsToUpdate.aiPreferenceVector = aiPreferenceVector;
+    }
+    if (vendorLocation) {
+      fieldsToUpdate.vendorLocation = vendorLocation;
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {

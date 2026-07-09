@@ -238,3 +238,75 @@ app.post('/api/payment/webhook/stripe', express.raw({ type: 'application/json' }
 4. Sets Redis idempotency key with a **24-hour TTL (****`86400 seconds`****)**.
 5. If `event.type === 'payment_intent.succeeded'`, atomically pushes the confirmed date range into `Room.bookedSlots` and updates `Booking.status` to `"CONFIRMED"`.
 - **Response (****`200 OK`****)**: `{ "received": true }`
+
+---
+## 6. Room Discovery, Reviews, & Profile API (Feature 3 Extensions)
+
+### `GET /api/rooms`
+Retrieves stays filtered by location, price, style, or coordinates (nearest geospatial `$near` query).
+- **Query Parameters**:
+  - `location`: Filter by address match.
+  - `minPrice` / `maxPrice`: nightly rate bounds.
+  - `latitude` / `longitude`: center coordinates for proximity sorting.
+  - `vendor`: filter by listing owner user ID.
+- **Response (`200 OK`)**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "6612a8f9c1b3e8203f1a9d01",
+      "title": "THE CONCRETE PENTHOUSE",
+      "location": "Shibuya, Tokyo",
+      "basePrice": 450,
+      "rating": 4.98,
+      "reviewsCount": 124,
+      "images": [{"url": "...", "public_id": "..."}]
+    }
+  ]
+}
+```
+
+### `GET /api/rooms/:slug`
+Retrieves full architectural specifications of a single stay matching slug.
+- **Response (`200 OK`)**:
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "6612a8f9c1b3e8203f1a9d01",
+    "title": "THE CONCRETE PENTHOUSE",
+    "slug": "concrete-penthouse-shibuya",
+    "description": "...",
+    "amenities": ["Raw Concrete", "Brass Fittings"]
+  }
+}
+```
+
+### `POST /api/rooms`
+Allows verified Vendors/Admins to publish a new architectural stay listing.
+- **Headers**: `Content-Type: multipart/form-data`
+- **Response (`201 Created`)**
+
+### `PUT /api/rooms/:id`
+Updates stay listing metadata. Restricts mutate permission to listing vendor/owner.
+- **Headers**: `Content-Type: multipart/form-data`
+- **Response (`200 OK`)**
+
+### `DELETE /api/rooms/:id`
+Permanently deletes a stay listing. Restricts delete permission to listing owner/vendor.
+- **Response (`200 OK`)**
+
+### `POST /api/reviews`
+Allows authenticated Guests to submit feedback for a stay. Triggers automatic aggregate recalculations on the target Room.
+- **Request Body**: `{ "roomId": "...", "rating": 5, "comment": "Excellent board-formed concrete walls." }`
+- **Response (`201 Created`)**
+
+### `GET /api/reviews/room/:roomId`
+Returns all architectural feedback registered for a room.
+- **Response (`200 OK`)**
+
+### `PUT /api/users/profile`
+Updates User account preferences and profiles. For Vendors, sets `vendorLocation` center point coordinates.
+- **Request Body**: `{ "vendorLocation": { "address": "Tokyo", "coordinates": [139.70, 35.65] } }`
+- **Response (`200 OK`)**

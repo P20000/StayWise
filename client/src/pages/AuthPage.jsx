@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { setUser } from '../store/slices/authSlice';
+import { setUser, setLoading, setError } from '../store/slices/authSlice';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
-import { Building2, Lock, Mail, User } from 'lucide-react';
+import { Building2, Lock, Mail, User as UserIcon } from 'lucide-react';
+import api from '../services/api';
 
 export const AuthPage = () => {
   const [searchParams] = useSearchParams();
@@ -15,22 +16,37 @@ export const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState('Guest'); // 'Guest' or 'Vendor'
+  const [localError, setLocalError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate stateless JWT authentication success
-    dispatch(
-      setUser({
-        id: 'user_staywise_99',
-        email: email || 'architect@staywise.ai',
-        name: name || 'Architectural Guest',
-        role: 'Guest',
-      })
-    );
-    navigate('/');
+    setLocalError('');
+    setSubmitting(true);
+    dispatch(setLoading(true));
+
+    try {
+      let response;
+      if (mode === 'login') {
+        response = await api.post('/auth/login', { email, password });
+      } else {
+        response = await api.post('/auth/register', { name, email, password, role });
+      }
+
+      const userData = response.data.user || response.data.data;
+      dispatch(setUser(userData));
+      navigate('/');
+    } catch (err) {
+      const errMsg = err.response?.data?.message || '[AUTH_ERROR] Connection failure.';
+      setLocalError(errMsg);
+      dispatch(setError(errMsg));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -46,7 +62,7 @@ export const AuthPage = () => {
             </span>
           </Link>
           <div className="font-mono text-xs uppercase text-[#C84B31] font-bold">
-            [ STATELSS JWT AUTHENTICATION GATEWAY ]
+            Your home away from home
           </div>
         </div>
 
@@ -60,7 +76,7 @@ export const AuthPage = () => {
                   : 'border-transparent text-[#212121]/50 hover:text-[#212121]'
               }`}
             >
-              [ SIGN IN ]
+              Sign In
             </button>
             <button
               onClick={() => setMode('register')}
@@ -70,32 +86,70 @@ export const AuthPage = () => {
                   : 'border-transparent text-[#212121]/50 hover:text-[#212121]'
               }`}
             >
-              [ RESERVE MEMBERSHIP ]
+              Create Account
             </button>
           </div>
 
+          {localError && (
+            <div className="bg-[#C84B31] text-white border-2 border-[#212121] p-3 mb-4 font-mono text-[11px] font-bold shadow-[2px_2px_0px_#212121]">
+              [ ERROR ]: {localError.toUpperCase()}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">
             {mode === 'register' && (
-              <div className="space-y-1">
-                <label className="font-bold uppercase text-[#212121] flex items-center gap-1">
-                  <User size={14} className="text-[#C84B31]" />
-                  <span>FULL NAME</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Tadao Ando"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-[#F1EDEA] border-2 border-[#212121] p-2.5 text-sm outline-none font-sans"
-                />
-              </div>
+              <>
+                <div className="space-y-1">
+                  <label className="font-bold uppercase text-[#212121] flex items-center gap-1">
+                    <UserIcon size={14} className="text-[#C84B31]" />
+                    <span>FULL NAME</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tadao Ando"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-[#F1EDEA] border-2 border-[#212121] p-2.5 text-sm outline-none font-sans"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold uppercase text-[#212121] block mb-1">
+                    Account Type
+                  </label>
+                  <div className="flex gap-6 border-2 border-[#212121] p-2.5 bg-[#F1EDEA]">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                      <input
+                        type="radio"
+                        name="role"
+                        value="Guest"
+                        checked={role === 'Guest'}
+                        onChange={() => setRole('Guest')}
+                        className="accent-[#C84B31] cursor-pointer"
+                      />
+                      <span>Guest</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                      <input
+                        type="radio"
+                        name="role"
+                        value="Vendor"
+                        checked={role === 'Vendor'}
+                        onChange={() => setRole('Vendor')}
+                        className="accent-[#C84B31] cursor-pointer"
+                      />
+                      <span>Property Host</span>
+                    </label>
+                  </div>
+                </div>
+              </>
             )}
 
             <div className="space-y-1">
               <label className="font-bold uppercase text-[#212121] flex items-center gap-1">
                 <Mail size={14} className="text-[#C84B31]" />
-                <span>EMAIL ADDRESS</span>
+                <span>Email</span>
               </label>
               <input
                 type="email"
@@ -110,7 +164,7 @@ export const AuthPage = () => {
             <div className="space-y-1">
               <label className="font-bold uppercase text-[#212121] flex items-center gap-1">
                 <Lock size={14} className="text-[#C84B31]" />
-                <span>CREDENTIAL SECRET</span>
+                <span>Password</span>
               </label>
               <input
                 type="password"
@@ -122,14 +176,20 @@ export const AuthPage = () => {
               />
             </div>
 
-            <Button type="submit" variant="primary" size="lg" className="w-full mt-6">
-              <span>{mode === 'login' ? 'AUTHENTICATE & ENTER' : 'INITIALIZE CREDENTIALS'}</span>
+            <Button type="submit" variant="primary" size="lg" className="w-full mt-6" disabled={submitting}>
+              <span>
+                {submitting
+                  ? 'Please wait...'
+                  : mode === 'login'
+                  ? 'Sign In'
+                  : 'Create Account'}
+              </span>
             </Button>
           </form>
 
           <div className="mt-6 pt-5 border-t border-[#212121]/15 text-center">
             <Badge variant="default" className="text-[10px]">
-              Rule #5: HttpOnly Signed Cookie Pipeline
+              Secured with encrypted session cookies
             </Badge>
           </div>
         </Card>

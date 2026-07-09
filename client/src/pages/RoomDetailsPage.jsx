@@ -1,37 +1,64 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
-import { Star, MapPin, Check, ShieldCheck, ArrowLeft, Calendar } from 'lucide-react';
+import { Star, MapPin, Check, ShieldCheck, ArrowLeft, Send, AlertCircle } from 'lucide-react';
+import api from '../services/api';
 
 export const RoomDetailsPage = () => {
   const { slug } = useParams();
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+
+  const [room, setRoom] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  // Booking modal state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
-  // Sample data matching Elevated Brutalism suite specs
-  const suite = {
-    title: slug?.replace(/-/g, ' ').toUpperCase() || 'THE CONCRETE PENTHOUSE',
-    location: 'Shibuya, Tokyo',
-    price: 450,
-    rating: 4.98,
-    reviewsCount: 124,
-    architecturalStyle: 'Board-Formed Concrete & Brass',
-    quietnessLevel: 'High (`dB < 32` certified)',
-    workplaceProfile: 'Symmetric 1 Gbps Fiber & Herman Miller Embody task seating',
-    description:
-      'Designed by Prizker-winning architectural innovators, this double-height penthouse features raw board-formed concrete walls juxtaposed with custom unlacquered brass hardware. Floor-to-ceiling double-glazed acoustically insulated windows reveal panoramic views of Shibuya Crossings canopy without acoustic intrusion.',
-    amenities: [
-      'Exposed Board-Formed Concrete Walls',
-      'Custom Unlacquered Brass Hardware',
-      '1 Gbps Dedicated Fiber Optical Wi-Fi',
-      'Acoustic Double-Glazing (`dB < 32`)',
-      'Terracotta En-Suite Rain Shower',
-      'Automated Solar & Blackout Louvers',
-    ],
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+  // New Review form state
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState('');
+
+  useEffect(() => {
+    fetchRoomDetails();
+  }, [slug]);
+
+  const fetchRoomDetails = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.get(`/rooms/${slug}`);
+      const roomData = response.data.data;
+      setRoom(roomData);
+      
+      // Fetch reviews
+      if (roomData?._id) {
+        fetchReviews(roomData._id);
+      }
+    } catch (err) {
+      setError('[DETAILS_ERROR] Could not resolve architectural specifications for this slug.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async (roomId) => {
+    try {
+      const response = await api.get(`/reviews/room/${roomId}`);
+      setReviews(response.data.data || []);
+    } catch (err) {
+      console.error('Failed to load reviews:', err);
+    }
   };
 
   const handleConfirmReservation = () => {
@@ -41,6 +68,63 @@ export const RoomDetailsPage = () => {
       setBookingConfirmed(false);
     }, 2000);
   };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) {
+      setReviewError('Please provide a comment for your feedback.');
+      return;
+    }
+    setSubmittingReview(true);
+    setReviewError('');
+    setReviewSuccess('');
+
+    try {
+      await api.post('/reviews', {
+        roomId: room._id,
+        rating: Number(newRating),
+        comment: newComment,
+      });
+      setReviewSuccess('[SUCCESS] Review submitted.');
+      setNewComment('');
+      setNewRating(5);
+      // Reload room rating and reviews list
+      fetchRoomDetails();
+    } catch (err) {
+      setReviewError(err.response?.data?.message || '[REVIEW_ERROR] Failed to post feedback.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F1EDEA] flex items-center justify-center font-mono text-xs uppercase text-[#212121]/50 select-none">
+        Loading stay details...
+      </div>
+    );
+  }
+
+  if (error || !room) {
+    return (
+      <div className="min-h-screen bg-[#F1EDEA] flex flex-col items-center justify-center p-4 select-none">
+        <div className="border-2 border-dashed border-[#212121]/30 p-8 text-center bg-white space-y-4 max-w-md">
+          <div className="font-mono text-sm font-bold text-[#212121] flex items-center justify-center gap-2">
+            <AlertCircle size={16} className="text-[#C84B31]" />
+            <span>Stay Not Found</span>
+          </div>
+          <p className="font-sans text-xs text-[#212121]/60">
+            {error || 'This property is not available in our listings.'}
+          </p>
+          <Link to="/explore">
+            <Button variant="primary" size="sm" className="mt-2">
+              Back to Listings
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F1EDEA] py-10 px-4 sm:px-6 lg:px-8 select-none">
@@ -52,7 +136,7 @@ export const RoomDetailsPage = () => {
             className="inline-flex items-center gap-2 font-mono text-xs uppercase font-bold text-[#212121] hover:text-[#C84B31] transition-colors"
           >
             <ArrowLeft size={16} />
-            <span>[ RETURN TO SUITE DIRECTORY ]</span>
+            <span>← Back to Listings</span>
           </Link>
         </div>
 
@@ -60,21 +144,21 @@ export const RoomDetailsPage = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-2 border-[#212121] pb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="terracotta">[ VERIFIED ARCHITECTURAL STAY ]</Badge>
-              <Badge variant="default">{suite.architecturalStyle}</Badge>
+              <Badge variant="terracotta">Verified Stay</Badge>
+              <Badge variant="default">{room.architecturalStyle}</Badge>
             </div>
-            <h1 className="font-mono text-3xl sm:text-5xl font-bold text-[#212121] tracking-tight">
-              {suite.title}
+            <h1 className="font-mono text-3xl sm:text-5xl font-bold text-[#212121] tracking-tight uppercase">
+              {room.title}
             </h1>
             <div className="flex items-center gap-4 mt-3 font-mono text-sm font-bold text-[#212121]/80">
               <span className="flex items-center gap-1 text-[#C84B31]">
                 <MapPin size={16} />
-                {suite.location}
+                {room.location}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Star size={16} className="text-[#C84B31] fill-[#C84B31]" />
-                {suite.rating} ({suite.reviewsCount} verified stays)
+                {room.rating.toFixed(2)} ({room.reviewsCount} verified stays)
               </span>
             </div>
           </div>
@@ -85,7 +169,7 @@ export const RoomDetailsPage = () => {
               onClick={() => setIsBookingModalOpen(true)}
               className="w-full md:w-auto px-10"
             >
-              <span>RESERVE SUITE — ${suite.price}/NT</span>
+              <span>Book Now — ${room.basePrice}/night</span>
             </Button>
           </div>
         </div>
@@ -93,8 +177,8 @@ export const RoomDetailsPage = () => {
         {/* Main Image Banner */}
         <div className="w-full h-[500px] border-3 border-[#212121] shadow-[6px_6px_0px_#212121] overflow-hidden bg-[#212121]">
           <img
-            src={suite.image}
-            alt={suite.title}
+            src={room.images?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'}
+            alt={room.title}
             className="w-full h-full object-cover"
           />
         </div>
@@ -104,29 +188,29 @@ export const RoomDetailsPage = () => {
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <h3 className="font-mono text-lg font-bold text-[#212121] border-b-2 border-[#212121] pb-3 mb-4">
-                [ ARCHITECTURAL SPECIFICATION & NARRATIVE ]
+                About This Stay
               </h3>
               <p className="font-sans text-base text-[#212121]/80 leading-relaxed">
-                {suite.description}
+                {room.description}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-[#212121]/20 font-mono text-xs">
                 <div>
-                  <span className="text-[#C84B31] font-bold block mb-1">[ ACOUSTIC RATING ]</span>
-                  <span>{suite.quietnessLevel}</span>
+                  <span className="text-[#C84B31] font-bold block mb-1">Noise Level</span>
+                  <span>{room.quietnessLevel}</span>
                 </div>
                 <div>
-                  <span className="text-[#C84B31] font-bold block mb-1">[ WORK PROFILE ]</span>
-                  <span>{suite.workplaceProfile}</span>
+                  <span className="text-[#C84B31] font-bold block mb-1">Work Space</span>
+                  <span>{room.workplaceProfile}</span>
                 </div>
               </div>
             </Card>
 
             <Card>
               <h3 className="font-mono text-lg font-bold text-[#212121] border-b-2 border-[#212121] pb-3 mb-4">
-                [ MATERIAL & STRUCTURAL AMENITIES ]
+                Amenities & Features
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {suite.amenities.map((amenity, i) => (
+                {room.amenities && room.amenities.map((amenity, i) => (
                   <div key={i} className="flex items-center gap-2 font-mono text-xs text-[#212121]">
                     <div className="bg-[#C84B31] text-white p-0.5">
                       <Check size={12} />
@@ -136,6 +220,102 @@ export const RoomDetailsPage = () => {
                 ))}
               </div>
             </Card>
+
+            {/* FEEDBACK ENGINE (REVIEWS) */}
+            <div className="space-y-6">
+              <h3 className="font-mono text-xl font-bold uppercase text-[#212121] border-b-2 border-[#212121] pb-2">
+                Guest Reviews
+              </h3>
+
+              {/* Review Input Box (Logged In Only) */}
+              {isAuthenticated ? (
+                <Card className="p-5 border-2 border-[#212121] bg-white">
+                  <h4 className="font-mono text-xs font-bold uppercase text-[#C84B31] mb-4">
+                    Leave a Review
+                  </h4>
+                  {reviewError && (
+                    <div className="bg-[#C84B31] text-white border border-[#212121] p-2 mb-3 font-mono text-[10px] font-bold">
+                      {reviewError.toUpperCase()}
+                    </div>
+                  )}
+                  {reviewSuccess && (
+                    <div className="bg-[#F1EDEA] text-emerald-800 border border-[#212121] p-2 mb-3 font-mono text-[10px] font-bold">
+                      {reviewSuccess.toUpperCase()}
+                    </div>
+                  )}
+                  <form onSubmit={handleReviewSubmit} className="space-y-4">
+                    <div className="flex items-center gap-3 font-mono text-xs">
+                      <span className="font-bold">Your Rating</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setNewRating(num)}
+                            className="bg-transparent border-0 p-0 cursor-pointer"
+                          >
+                            <Star
+                              size={18}
+                              className={num <= newRating ? 'text-[#C84B31] fill-[#C84B31]' : 'text-gray-300'}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 font-mono text-xs">
+                      <label className="font-bold block">Your Review</label>
+                      <textarea
+                        rows={3}
+                        required
+                        placeholder="Share your experience..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        className="w-full bg-[#F1EDEA] border-2 border-[#212121] p-2.5 outline-none font-sans text-xs resize-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button variant="primary" size="sm" type="submit" disabled={submittingReview}>
+                        <Send size={12} />
+                        <span>{submittingReview ? 'Submitting...' : 'Submit Review'}</span>
+                      </Button>
+                    </div>
+                  </form>
+                </Card>
+              ) : (
+                <div className="border-2 border-dashed border-[#212121]/30 p-4 text-center font-mono text-[10px] uppercase text-[#212121]/60 bg-[#212121]/5">
+                  Sign in to leave a review — <Link to="/auth" className="text-[#C84B31] underline font-bold">Sign In</Link>
+                </div>
+              )}
+
+              {/* Reviews List */}
+              {reviews.length === 0 ? (
+                <div className="font-mono text-xs text-[#212121]/50 uppercase py-4">
+                  No reviews yet. Be the first to leave one!
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((rev) => (
+                    <Card key={rev._id} className="p-4 bg-white">
+                      <div className="flex items-center justify-between border-b border-[#212121]/15 pb-2 mb-2 font-mono text-[10px]">
+                        <div className="font-bold flex items-center gap-1.5">
+                          <span className="text-[#C84B31]">[ GUEST ]</span>
+                          <span>{rev.user?.name || 'Anonymous User'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Star size={12} className="text-[#C84B31] fill-[#C84B31]" />
+                          <span className="font-bold">{rev.rating}</span>
+                        </div>
+                      </div>
+                      <p className="font-sans text-xs text-[#212121]/80 italic">
+                        "{rev.comment}"
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Reservation Card */}
@@ -144,13 +324,13 @@ export const RoomDetailsPage = () => {
               <div className="flex items-center justify-between border-b-2 border-[#212121] pb-4 mb-5">
                 <div>
                   <span className="font-mono text-3xl font-bold text-[#212121]">
-                    ${suite.price}
+                    ${room.basePrice}
                   </span>
                   <span className="font-mono text-xs text-[#212121]/60 uppercase">
                     {' '}/ night
                   </span>
                 </div>
-                <Badge variant="terracotta">[ INSTANT LOCK ]</Badge>
+                <Badge variant="terracotta">Available</Badge>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -170,8 +350,8 @@ export const RoomDetailsPage = () => {
 
                 <div className="space-y-2 pt-2 font-mono text-xs border-t border-[#212121]/20">
                   <div className="flex justify-between">
-                    <span>${suite.price} × 3 nights</span>
-                    <span>${suite.price * 3}</span>
+                    <span>${room.basePrice} × 3 nights</span>
+                    <span>${room.basePrice * 3}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cleaning & Architecture Fee</span>
@@ -179,7 +359,7 @@ export const RoomDetailsPage = () => {
                   </div>
                   <div className="flex justify-between font-bold text-sm pt-2 border-t border-[#212121]">
                     <span>TOTAL DUE</span>
-                    <span>${suite.price * 3 + 120}</span>
+                    <span>${room.basePrice * 3 + 120}</span>
                   </div>
                 </div>
               </div>
@@ -190,12 +370,12 @@ export const RoomDetailsPage = () => {
                 className="w-full"
                 onClick={() => setIsBookingModalOpen(true)}
               >
-                <span>PROCEED TO STATELSS BOOKING</span>
+                <span>Book This Stay</span>
               </Button>
 
               <div className="flex items-center gap-2 justify-center mt-4 font-mono text-[10px] text-[#212121]/60 uppercase">
                 <ShieldCheck size={14} className="text-[#C84B31]" />
-                <span>Redis Concurrency Slot Lock Protected</span>
+                <span>Secure checkout guaranteed</span>
               </div>
             </Card>
           </div>
@@ -206,7 +386,7 @@ export const RoomDetailsPage = () => {
       <Modal
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
-        title="[ STATELSS RESERVATION COMMITMENT ]"
+        title="Confirm Your Booking"
       >
         {bookingConfirmed ? (
           <div className="text-center py-8 space-y-4">
@@ -214,27 +394,26 @@ export const RoomDetailsPage = () => {
               <Check size={28} />
             </div>
             <h4 className="font-mono text-xl font-bold text-[#212121]">
-              [ SLOT LOCK CONFIRMED ]
+              Booking Confirmed!
             </h4>
             <p className="font-sans text-sm text-[#212121]/80">
-              Your room slot has been locked via Redis. Stripe PaymentIntent (`pi_3L9...`)
-              finalization sent to webhook.
+              Your reservation is confirmed. You'll receive a confirmation email shortly.
             </p>
           </div>
         ) : (
           <div className="space-y-5 font-mono text-xs">
             <div className="bg-[#F1EDEA] border-2 border-[#212121] p-4 space-y-2">
-              <div className="font-bold text-[#C84B31]">[ ROOM SLOT SUMMARY ]</div>
+              <div className="font-bold text-[#C84B31]">Booking Summary</div>
               <div className="flex justify-between text-sm font-bold">
-                <span>{suite.title}</span>
-                <span>${suite.price * 3 + 120}</span>
+                <span>{room.title}</span>
+                <span>${room.basePrice * 3 + 120}</span>
               </div>
-              <div className="text-[#212121]/70">Location: {suite.location}</div>
+              <div className="text-[#212121]/70">Location: {room.location}</div>
             </div>
 
             <div className="space-y-2">
               <label className="font-bold uppercase text-[#212121] block">
-                [ GUEST EMAIL FOR WEBHOOK CONFIRMATION ]
+                Email for confirmation
               </label>
               <input
                 type="email"
@@ -250,7 +429,7 @@ export const RoomDetailsPage = () => {
               className="w-full mt-4"
               onClick={handleConfirmReservation}
             >
-              COMMIT & PAY VIA STRIPE WEBHOOK
+              CONFIRM & PAY
             </Button>
           </div>
         )}
