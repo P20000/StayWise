@@ -2,9 +2,9 @@
 All changes to the StayWise codebase and documentation are tracked in this file.
 ---
 date: 2026-07-09
-what changed : Implemented the full Docker development configurations and production-grade Render blueprints. Created multi-stage client and server Dockerfiles, local docker-compose configurations, and production render.yaml specifications. Added root Dockerfile wrapper to support manual Render service builds.
-what files changed : `Dockerfile`, `client/Dockerfile`, `client/nginx.conf`, `server/Dockerfile`, `docker-compose.yml`, `.dockerignore`, `render.yaml`
-why changed : To satisfy Feature 2 deployment architecture and support both manual Dashboard and blueprint-based Render deployments, ensuring the build definition is always found at the repository root.
+what changed : Implemented the full Docker development configurations and production-grade Render blueprints. Created multi-stage client and server Dockerfiles, local docker-compose configurations, and production render.yaml specifications. Added root Dockerfile wrapper to support manual Render service builds. Added environment safeguards to the database config to output clear fatal messages when MONGO_URI is missing in production.
+what files changed : `Dockerfile`, `client/Dockerfile`, `client/nginx.conf`, `server/Dockerfile`, `server/config/db.js`, `docker-compose.yml`, `.dockerignore`, `render.yaml`
+why changed : To satisfy Feature 2 deployment architecture, support both manual Dashboard and blueprint-based Render deployments, and prevent cryptic DB connection errors by notifying the user immediately when required production variables are not configured.
 ---
 date: 2026-07-09
 what changed : Refactored documentation sync architecture to create separate standalone sub-pages under a parent page titled 'StayWise Documentation' instead of writing to the prompts database, and cleared accidental doc entries from the prompts database.
