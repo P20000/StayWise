@@ -67,16 +67,23 @@ export const CinematicHero = () => {
           aria-label="StayWise architectural suite view"
         />
       ) : (
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          poster="/assets/cinematic/final-frame-poster.webp"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        >
-          <source src="/assets/cinematic/staywise-architectural-tour.mp4" type="video/mp4" />
-        </video>
+        <div
+          className="absolute inset-0 w-full h-full"
+          dangerouslySetInnerHTML={{
+            __html: `
+              <video
+                autoplay
+                loop
+                muted
+                playsinline
+                poster="/assets/cinematic/final-frame-poster.webp"
+                class="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              >
+                <source src="/assets/cinematic/staywise-architectural-tour.mp4" type="video/mp4" />
+              </video>
+            `
+          }}
+        />
       )}
 
       {/* ── Gradient overlay ─────────────────────────────────────────────── */}
