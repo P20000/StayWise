@@ -396,7 +396,7 @@ export const VendorDashboardPage = () => {
       formData.append('location', address);
       formData.append('architecturalStyle', archStyle);
       formData.append('quietnessLevel', acousticLevel);
-      formData.append('workplaceProfile', workplaceProfile);
+      formData.append('workplaceProfile', workspaceProfile);
       
       // Calculate base price as the minimum tier price
       const minBasePrice = Math.min(...roomTiers.map(t => t.basePrice));
