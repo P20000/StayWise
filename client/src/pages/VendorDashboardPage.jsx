@@ -188,6 +188,48 @@ const CalendarRangePicker = ({ value, onChange }) => {
   );
 };
 
+// Skeleton / Ghost stay card representing a loading state
+const StayCardSkeleton = () => (
+  <div className="flex flex-col justify-between overflow-hidden bg-white border-2 border-[#212121] shadow-[5px_5px_0px_#212121] relative animate-pulse h-[400px]">
+    {/* Map placeholder */}
+    <div className="w-full h-36 bg-[#212121]/10 border-b-2 border-[#212121]" />
+    {/* Content */}
+    <div className="p-5 flex-grow space-y-3">
+      <div className="h-4 bg-[#212121]/10 w-2/3 border border-[#212121]/5" />
+      <div className="h-3 bg-[#212121]/10 w-full border border-[#212121]/5" />
+      <div className="h-3 bg-[#212121]/10 w-5/6 border border-[#212121]/5" />
+      <div className="flex gap-2 pt-2">
+        <div className="h-5 bg-[#212121]/10 w-16 border border-[#212121]/5" />
+        <div className="h-5 bg-[#212121]/10 w-20 border border-[#212121]/5" />
+      </div>
+    </div>
+    {/* Actions bar placeholder */}
+    <div className="border-t-2 border-[#212121] bg-[#F1EDEA] p-3 flex justify-between items-center gap-2">
+      <div className="h-7 bg-[#212121]/10 w-24 border border-[#212121]/5" />
+      <div className="flex gap-2">
+        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
+        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
+        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
+      </div>
+    </div>
+  </div>
+);
+
+// Skeleton / Ghost booking card representing a loading state
+const BookingCardSkeleton = () => (
+  <div className="p-4 bg-white border-2 border-[#212121] shadow-[4px_4px_0px_#212121] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
+    <div className="space-y-2 flex-grow">
+      <div className="h-4 bg-[#212121]/10 w-24 border border-[#212121]/5" />
+      <div className="h-5 bg-[#212121]/10 w-48 border border-[#212121]/5" />
+      <div className="h-3 bg-[#212121]/10 w-32 border border-[#212121]/5" />
+    </div>
+    <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+      <div className="h-6 bg-[#212121]/10 w-16 border border-[#212121]/5" />
+      <div className="h-4 bg-[#212121]/10 w-20 border border-[#212121]/5" />
+    </div>
+  </div>
+);
+
 export const VendorDashboardPage = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -280,11 +322,19 @@ export const VendorDashboardPage = () => {
     try {
       // Fetch Rooms
       const roomsRes = await api.get(`/rooms?vendor=${user._id || user.id}`);
-      setRooms(roomsRes.data.data || []);
+      const roomsData = roomsRes.data.data || [];
+      setRooms(roomsData);
+      if (user) {
+        localStorage.setItem(`stay_count_${user._id || user.id}`, roomsData.length);
+      }
       
       // Fetch Bookings made on this Vendor's Rooms
       const bookingsRes = await api.get('/bookings/vendor-bookings');
-      setBookings(bookingsRes.data.data || []);
+      const bookingsData = bookingsRes.data.data || [];
+      setBookings(bookingsData);
+      if (user) {
+        localStorage.setItem(`booking_count_${user._id || user.id}`, bookingsData.length);
+      }
     } catch (err) {
       err.message = `[DASHBOARD_ERROR] Could not fetch dashboard metrics: ${err.message}`;
       setError(err);
@@ -820,17 +870,18 @@ export const VendorDashboardPage = () => {
             </div>
 
             {/* Render Tab Contents */}
-            {loading ? (
-              <div className="text-center py-16 font-mono text-xs uppercase text-[#212121]/50">
-                Syncing client indices with remote staywise records...
-              </div>
-            ) : (
-              <>
+            <>
                 {/* 1. MANAGE BOOKINGS TAB */}
                 {activeTab === 'bookings' && (
                   <div className="space-y-4">
                     <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ INCOMING GUEST BOOKINGS ]</h2>
-                    {bookings.length === 0 ? (
+                    {loading ? (
+                      <div className="space-y-4">
+                        {Array.from({ length: bookings.length > 0 ? bookings.length : (parseInt(localStorage.getItem(`booking_count_${user?._id || user?.id}`)) || 2) }).map((_, idx) => (
+                          <BookingCardSkeleton key={idx} />
+                        ))}
+                      </div>
+                    ) : bookings.length === 0 ? (
                       <div className="border-2 border-dashed border-[#212121]/30 p-12 text-center bg-white space-y-2">
                         <div className="font-mono text-sm font-bold text-[#212121]">[ NO ACTIVE INCOMING RESERVATIONS ]</div>
                         <p className="font-sans text-xs text-[#212121]/60 max-w-sm mx-auto">
@@ -871,7 +922,13 @@ export const VendorDashboardPage = () => {
                 {activeTab === 'listings' && (
                   <div className="space-y-4">
                     <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ YOUR PUBLISHED modernist STAYS ]</h2>
-                    {rooms.length === 0 ? (
+                    {loading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {Array.from({ length: rooms.length > 0 ? rooms.length : (parseInt(localStorage.getItem(`stay_count_${user?._id || user?.id}`)) || 3) }).map((_, idx) => (
+                          <StayCardSkeleton key={idx} />
+                        ))}
+                      </div>
+                    ) : rooms.length === 0 ? (
                       <div className="border-2 border-dashed border-[#212121]/30 p-12 text-center bg-white space-y-2">
                         <div className="font-mono text-sm font-bold text-[#212121]">[ PORTFOLIO IS EMPTY ]</div>
                         <p className="font-sans text-xs text-[#212121]/60 max-w-sm mx-auto">
@@ -1104,7 +1161,6 @@ export const VendorDashboardPage = () => {
                   </div>
                 )}
               </>
-            )}
           </>
         ) : (
           // SECTION B: MULTI-STEP CREATION FLOW VIEW
