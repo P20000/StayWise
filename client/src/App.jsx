@@ -13,6 +13,7 @@ import { VendorSetupPage } from './pages/VendorSetupPage';
 import { VendorDashboardPage } from './pages/VendorDashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AIPicksPage } from './pages/AIPicksPage';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export const App = () => {
   const dispatch = useDispatch();
@@ -41,8 +42,22 @@ export const App = () => {
           <Route path="/recommender" element={<AIPicksPage />} />
           <Route path="/room/:slug" element={<RoomDetailsPage />} />
           <Route path="/auth" element={<AuthPage />} />
-          <Route path="/vendor/setup" element={<VendorSetupPage />} />
-          <Route path="/vendor/dashboard" element={<VendorDashboardPage />} />
+          <Route
+            path="/vendor/setup"
+            element={
+              <ProtectedRoute allowedRoles={['Vendor']}>
+                <VendorSetupPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['Vendor']}>
+                <VendorDashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>

@@ -126,18 +126,12 @@ export const VendorDashboardPage = () => {
     }
   }, [location]);
 
-  // Auth Guards & Fetchers
+  // Fetch dashboard metrics when user session is loaded
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/auth');
-      return;
+    if (user) {
+      fetchDashboardData();
     }
-    if (user?.role !== 'Vendor') {
-      navigate('/');
-      return;
-    }
-    fetchDashboardData();
-  }, [user, isAuthenticated, navigate]);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setLoading(true);

@@ -23,14 +23,6 @@ export const VendorSetupPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/auth');
-      return;
-    }
-    if (user?.role !== 'Vendor') {
-      navigate('/');
-      return;
-    }
     // Populate if existing
     if (user?.vendorLocation) {
       setAddress(user.vendorLocation.address || '');
@@ -38,7 +30,7 @@ export const VendorSetupPage = () => {
         setCoordinates(user.vendorLocation.coordinates);
       }
     }
-  }, [user, isAuthenticated, navigate]);
+  }, [user]);
 
   // Query OpenStreetMap Nominatim for autocomplete search
   const handleAddressSearch = async (val) => {
