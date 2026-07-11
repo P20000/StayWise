@@ -1,6 +1,16 @@
 # StayWise Change Logs
 All changes to the StayWise codebase and documentation are tracked in this file.
 ---
+date: 2026-07-11
+what changed : Rewrote Feature3.md, feature4.md, and feature5.md from rough bullet-note drafts into full engineering specification documents. Each doc now reflects the actual implemented code, component-level architecture, acceptance criteria, design system compliance notes, and file maps aligned with the production codebase.
+what files changed : `docs/Features/Feature3.md`, `docs/Features/feature4.md`, `docs/Features/feature5.md`
+why changed : Per AGENT.md Rule 15 (Documentation Completeness Check) and Rule 16 (Mandatory Change Log Maintenance): code modifications and architectural decisions must not remain siloed in source files. The previous feature docs were raw product notes with no engineering detail, making them unusable as references.
+---
+date: 2026-07-11
+what changed : Implemented Feature 5 — Truthful Rating System. Fixed hardcoded `rating: 4.95` default in Room schema; new listings now default to `rating: 0`, `min: 0`. Added conditional "Newly Added" / "Newly Listed" UI state across three surfaces: (1) Explore page image card shows pulsing amber `✦ NEWLY ADDED` badge, (2) Room detail page header shows amber `✦ NEWLY LISTED — NO REVIEWS YET` label replacing the star rating, (3) Vendor dashboard listing card shows terracotta `✦ NEWLY LISTED` pulse label. Upgraded Room detail reviews empty state from bare text to a dashed amber callout "Be the first to review this stay".
+what files changed : `server/models/Room.js`, `client/src/pages/ExplorePage.jsx`, `client/src/pages/RoomDetailsPage.jsx`, `client/src/pages/VendorDashboardPage.jsx`
+why changed : New listings were displaying a fabricated `4.95` rating with 0 reviews, misleading guests on the explore and detail pages, and presenting nonsensical feedback metrics to the vendor who just created the property. The fix ensures rating displays are truthful — only real review aggregates are shown, and zero-review listings receive a clear informational "Newly Added" state instead.
+---
 date: 2026-07-09
 what changed : Implemented Dynamic Rooms CRUD, Geolocation Tracking, and Feedback Review Engine (Feature 3). Refactored user and room mongoose schemas to support 2dsphere indexing. Created backend review aggregate logic and endpoints. Updated frontend to connect to real auth register/login/session endpoints, implemented OpenStreetMap autocomplete and HTML5 GPS geolocation tracking in Vendor Setup, added room CRUD in Vendor Dashboard, and added reviews section in Room Details.
 what files changed : `server/models/Room.js`, `server/models/User.js`, `server/controllers/roomController.js`, `server/routes/roomRoutes.js`, `server/controllers/userController.js`, `server/controllers/reviewController.js`, `server/routes/reviewRoutes.js`, `server/server.js`, `client/src/pages/AuthPage.jsx`, `client/src/components/layout/Navbar.jsx`, `client/src/pages/VendorSetupPage.jsx`, `client/src/pages/VendorDashboardPage.jsx`, `client/src/pages/ExplorePage.jsx`, `client/src/components/landing/FeaturedHotels.jsx`, `client/src/pages/RoomDetailsPage.jsx`, `client/src/App.jsx`, `docs/DATABASE_SCHEMA.md`, `docs/API_REFERENCE.md`

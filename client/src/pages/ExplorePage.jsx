@@ -162,11 +162,18 @@ export const ExplorePage = () => {
                         </Badge>
                       </div>
                     )}
-                    <div className="absolute bottom-3 right-3 bg-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
-                      <Star size={12} className="text-[#C84B31] fill-[#C84B31]" />
-                      <span>{suite.rating}</span>
-                      <span className="text-[#212121]/50">({suite.reviewsCount})</span>
-                    </div>
+                    {(!suite.reviewsCount || suite.reviewsCount === 0) ? (
+                      <div className="absolute bottom-3 right-3 flex items-center gap-1 font-mono text-[10px] font-bold bg-amber-50 border border-amber-400 text-amber-700 px-2 py-0.5 shadow-[2px_2px_0px_rgba(0,0,0,0.15)] animate-pulse">
+                        <span>✦</span>
+                        <span>NEWLY ADDED</span>
+                      </div>
+                    ) : (
+                      <div className="absolute bottom-3 right-3 bg-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
+                        <Star size={12} className="text-[#C84B31] fill-[#C84B31]" />
+                        <span>{suite.rating}</span>
+                        <span className="text-[#212121]/50">({suite.reviewsCount})</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-5">

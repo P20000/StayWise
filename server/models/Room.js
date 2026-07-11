@@ -59,8 +59,8 @@ const roomSchema = new mongoose.Schema(
     ],
     rating: {
       type: Number,
-      default: 4.95,
-      min: 1.0,
+      default: 0,
+      min: 0,
       max: 5.0,
     },
     reviewsCount: {

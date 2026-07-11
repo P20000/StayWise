@@ -154,10 +154,17 @@ export const RoomDetailsPage = () => {
                 {room.location}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1">
-                <Star size={16} className="text-[#C84B31] fill-[#C84B31]" />
-                {room.rating.toFixed(2)} ({room.reviewsCount} verified stays)
-              </span>
+              {(!room.reviewsCount || room.reviewsCount === 0) ? (
+                <span className="flex items-center gap-1.5 text-amber-600 font-bold text-xs font-mono border border-amber-400 bg-amber-50 px-2 py-0.5">
+                  <span className="animate-pulse">✦</span>
+                  <span>NEWLY LISTED — NO REVIEWS YET</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Star size={16} className="text-[#C84B31] fill-[#C84B31]" />
+                  {room.rating.toFixed(2)} ({room.reviewsCount} verified stays)
+                </span>
+              )}
             </div>
           </div>
           <div>
@@ -287,8 +294,12 @@ export const RoomDetailsPage = () => {
 
               {/* Reviews List */}
               {reviews.length === 0 ? (
-                <div className="font-mono text-xs text-[#212121]/50 uppercase py-4">
-                  No reviews yet. Be the first to leave one!
+                <div className="border-2 border-dashed border-amber-300 bg-amber-50/50 p-6 flex flex-col items-center text-center gap-2">
+                  <span className="text-2xl animate-pulse">✦</span>
+                  <p className="font-mono text-xs font-bold text-amber-700 uppercase tracking-wider">Be the first to review this stay</p>
+                  <p className="font-sans text-[11px] text-[#212121]/50 max-w-xs">
+                    This listing has no guest reviews yet. Share your experience and help future travelers discover it.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">

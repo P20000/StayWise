@@ -968,7 +968,13 @@ export const VendorDashboardPage = () => {
                                 
                                 <div className="pt-2 flex items-center gap-4 text-[10px] text-[#212121]/60 font-bold uppercase">
                                   <span>[ Tiers: {room.roomTiers?.length || 0} ]</span>
-                                  <span>[ Feedback: {room.rating} ★ ]</span>
+                                  {(!room.reviewsCount || room.reviewsCount === 0) ? (
+                                    <span className="flex items-center gap-1 text-[#C84B31] border border-[#C84B31] bg-[#C84B31]/5 px-1.5 py-0.5 text-[9px] animate-pulse">
+                                      ✦ NEWLY LISTED
+                                    </span>
+                                  ) : (
+                                    <span>[ Feedback: {room.rating} ★ ]</span>
+                                  )}
                                 </div>
                               </div>
                             </div>
