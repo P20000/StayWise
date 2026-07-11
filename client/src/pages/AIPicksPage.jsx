@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import {
   setPreferences,
   setRecommendedRooms,
@@ -62,7 +63,7 @@ export const AIPicksPage = () => {
   );
 
   const [allRooms, setAllRooms] = useState([]);
-  const [fetchError, setFetchError] = useState('');
+  const [fetchError, setFetchError] = useState(null);
   const [hasFetched, setHasFetched] = useState(false);
   const [matchScore, setMatchScore] = useState(null);
 
@@ -70,13 +71,14 @@ export const AIPicksPage = () => {
   useEffect(() => {
     const load = async () => {
       dispatch(setRecommenderLoading(true));
-      setFetchError('');
+      setFetchError(null);
       try {
         const res = await api.get('/rooms');
         const data = res.data.data || [];
         setAllRooms(data);
-      } catch {
-        setFetchError('Could not load listings. Please try again.');
+      } catch (err) {
+        err.message = `Could not load listings: ${err.message}`;
+        setFetchError(err);
       } finally {
         dispatch(setRecommenderLoading(false));
       }
@@ -256,9 +258,7 @@ export const AIPicksPage = () => {
       <div className="px-4 sm:px-6 lg:px-8 py-12">
         <div className="max-w-7xl mx-auto">
           {fetchError && (
-            <div className="bg-[#C84B31] text-white border-2 border-[#212121] p-4 font-mono text-xs font-bold shadow-[2px_2px_0px_#212121] mb-8">
-              {fetchError.toUpperCase()}
-            </div>
+            <ErrorBanner error={fetchError} className="mb-8" onClose={() => setFetchError(null)} />
           )}
 
           {!hasFetched ? (

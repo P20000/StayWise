@@ -4,6 +4,7 @@ import { SearchBar } from '../components/search/SearchBar';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import { Star, MapPin, Navigation, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
@@ -13,7 +14,7 @@ export const ExplorePage = () => {
 
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [gpsCoords, setGpsCoords] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
 
@@ -23,7 +24,7 @@ export const ExplorePage = () => {
 
   const fetchRooms = async () => {
     setLoading(true);
-    setError('');
+    setError(null);
     try {
       const params = {};
       if (filters.location) params.location = filters.location;
@@ -50,7 +51,8 @@ export const ExplorePage = () => {
 
       setRooms(data);
     } catch (err) {
-      setError('[DIRECTORY_ERROR] Failed to fetch architectural listings.');
+      err.message = `[DIRECTORY_ERROR] Failed to fetch architectural listings: ${err.message}`;
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -117,9 +119,7 @@ export const ExplorePage = () => {
         </div>
 
         {error && (
-          <div className="bg-[#C84B31] text-white border-2 border-[#212121] p-4 font-mono text-xs font-bold shadow-[2px_2px_0px_#212121]">
-            {error.toUpperCase()}
-          </div>
+          <ErrorBanner error={error} className="mb-6 shadow-[2px_2px_0px_#212121]" onClose={() => setError(null)} />
         )}
 
         {/* Results Grid */}

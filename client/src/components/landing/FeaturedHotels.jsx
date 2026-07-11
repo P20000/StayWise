@@ -5,6 +5,7 @@ import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { Star, ArrowUpRight, MapPin, AlertCircle } from 'lucide-react';
 import api from '../../services/api';
+import { ErrorBanner } from '../common/ErrorBanner';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -13,7 +14,7 @@ gsap.registerPlugin(ScrollTrigger);
 export const FeaturedHotels = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const sectionRef = useRef(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export const FeaturedHotels = () => {
         const sorted = [...data].sort((a, b) => b.rating - a.rating).slice(0, 3);
         setRooms(sorted);
       } catch (err) {
-        setError('[FEATURED_ERROR] Could not resolve signature collection.');
+        setError(err);
       } finally {
         setLoading(false);
       }
@@ -88,9 +89,7 @@ export const FeaturedHotels = () => {
         </div>
 
         {error && (
-          <div className="bg-[#C84B31] text-white border-2 border-[#F1EDEA]/20 p-4 font-mono text-xs font-bold mb-8">
-            {error.toUpperCase()}
-          </div>
+          <ErrorBanner error={error} className="mb-8" onClose={() => setError(null)} />
         )}
 
         {/* Grid */}

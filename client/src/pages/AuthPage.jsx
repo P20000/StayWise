@@ -5,6 +5,7 @@ import { setUser, setLoading, setError } from '../store/slices/authSlice';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import { Building2, Lock, Mail, User as UserIcon } from 'lucide-react';
 import api from '../services/api';
 
@@ -17,7 +18,7 @@ export const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('Guest'); // 'Guest' or 'Vendor'
-  const [localError, setLocalError] = useState('');
+  const [localError, setLocalError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const dispatch = useDispatch();
@@ -25,7 +26,7 @@ export const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
+    setLocalError(null);
     setSubmitting(true);
     dispatch(setLoading(true));
 
@@ -41,9 +42,8 @@ export const AuthPage = () => {
       dispatch(setUser(userData));
       navigate('/');
     } catch (err) {
-      const errMsg = err.response?.data?.message || '[AUTH_ERROR] Connection failure.';
-      setLocalError(errMsg);
-      dispatch(setError(errMsg));
+      setLocalError(err);
+      dispatch(setError(err.response?.data?.message || '[AUTH_ERROR] Connection failure.'));
     } finally {
       setSubmitting(false);
     }
@@ -91,9 +91,7 @@ export const AuthPage = () => {
           </div>
 
           {localError && (
-            <div className="bg-[#C84B31] text-white border-2 border-[#212121] p-3 mb-4 font-mono text-[11px] font-bold shadow-[2px_2px_0px_#212121]">
-              [ ERROR ]: {localError.toUpperCase()}
-            </div>
+            <ErrorBanner error={localError} className="mb-4" onClose={() => setLocalError(null)} />
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 font-mono text-xs">

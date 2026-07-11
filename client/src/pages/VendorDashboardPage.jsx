@@ -10,6 +10,7 @@ import {
   User, Check, Loader2, Play, Pause, Copy, Calendar
 } from 'lucide-react';
 import api from '../services/api';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import { gsap } from 'gsap';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -64,7 +65,7 @@ export const VendorDashboardPage = () => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
 
   // Editing / Multi-step creation state
@@ -149,7 +150,8 @@ export const VendorDashboardPage = () => {
       const bookingsRes = await api.get('/bookings/vendor-bookings');
       setBookings(bookingsRes.data.data || []);
     } catch (err) {
-      setError('[DASHBOARD_ERROR] Could not fetch dashboard metrics.');
+      err.message = `[DASHBOARD_ERROR] Could not fetch dashboard metrics: ${err.message}`;
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -433,7 +435,8 @@ export const VendorDashboardPage = () => {
       setIsEditing(false);
       fetchDashboardData();
     } catch (err) {
-      setError(err.response?.data?.message || '[REGISTRY_ERROR] Submission process aborted.');
+      err.message = `[REGISTRY_ERROR] Submission process aborted: ${err.response?.data?.message || err.message}`;
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -483,7 +486,8 @@ export const VendorDashboardPage = () => {
       setSuccess(`[UPDATED] Listing status updated to: ${nextStatus.toUpperCase()}`);
       fetchDashboardData();
     } catch (err) {
-      setError('[STATUS_ERROR] Failed to modify listing status.');
+      err.message = `[STATUS_ERROR] Failed to modify listing status: ${err.message}`;
+      setError(err);
     }
   };
 
@@ -507,7 +511,8 @@ export const VendorDashboardPage = () => {
       setSuccess('[DUPLICATE] Listing cloned successfully.');
       fetchDashboardData();
     } catch (err) {
-      setError('[DUPLICATE_ERROR] Failed to duplicate listing.');
+      err.message = `[DUPLICATE_ERROR] Failed to duplicate listing: ${err.message}`;
+      setError(err);
     }
   };
 
@@ -522,7 +527,8 @@ export const VendorDashboardPage = () => {
         setSuccess('[DELETED] Listing permanently dismantled.');
         fetchDashboardData();
       } catch (err) {
-        setError('[DELETE_ERROR] Failed to delete listing.');
+        err.message = `[DELETE_ERROR] Failed to delete listing: ${err.message}`;
+        setError(err);
       }
     } else {
       alert("Dismantling aborted. Title mismatch.");
@@ -573,10 +579,7 @@ export const VendorDashboardPage = () => {
 
         {/* Global Notifications */}
         {error && (
-          <div className="bg-[#C84B31] text-white border-2 border-[#212121] p-4 font-mono text-xs font-bold shadow-[3px_3px_0px_#212121] flex justify-between items-center">
-            <span>[ ERROR ]: {error.toUpperCase()}</span>
-            <button onClick={() => setError('')} className="text-white bg-transparent border-0 cursor-pointer font-bold"><X size={14} /></button>
-          </div>
+          <ErrorBanner error={error} className="mb-6 shadow-[3px_3px_0px_#212121]" onClose={() => setError(null)} />
         )}
         {success && (
           <div className="bg-emerald-800 text-white border-2 border-[#212121] p-4 font-mono text-xs font-bold shadow-[3px_3px_0px_#212121] flex justify-between items-center">

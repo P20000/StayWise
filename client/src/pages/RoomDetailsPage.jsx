@@ -5,6 +5,7 @@ import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import { Star, MapPin, Check, ShieldCheck, ArrowLeft, Send, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
@@ -16,7 +17,7 @@ export const RoomDetailsPage = () => {
   const [room, setRoom] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   
   // Booking modal state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -26,7 +27,7 @@ export const RoomDetailsPage = () => {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewError, setReviewError] = useState('');
+  const [reviewError, setReviewError] = useState(null);
   const [reviewSuccess, setReviewSuccess] = useState('');
 
   useEffect(() => {
@@ -35,7 +36,7 @@ export const RoomDetailsPage = () => {
 
   const fetchRoomDetails = async () => {
     setLoading(true);
-    setError('');
+    setError(null);
     try {
       const response = await api.get(`/rooms/${slug}`);
       const roomData = response.data.data;
@@ -46,7 +47,8 @@ export const RoomDetailsPage = () => {
         fetchReviews(roomData._id);
       }
     } catch (err) {
-      setError('[DETAILS_ERROR] Could not resolve architectural specifications for this slug.');
+      err.message = `[DETAILS_ERROR] Could not resolve architectural specifications for this slug: ${err.message}`;
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -72,11 +74,11 @@ export const RoomDetailsPage = () => {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) {
-      setReviewError('Please provide a comment for your feedback.');
+      setReviewError(new Error('Please provide a comment for your feedback.'));
       return;
     }
     setSubmittingReview(true);
-    setReviewError('');
+    setReviewError(null);
     setReviewSuccess('');
 
     try {
@@ -91,7 +93,7 @@ export const RoomDetailsPage = () => {
       // Reload room rating and reviews list
       fetchRoomDetails();
     } catch (err) {
-      setReviewError(err.response?.data?.message || '[REVIEW_ERROR] Failed to post feedback.');
+      setReviewError(err);
     } finally {
       setSubmittingReview(false);
     }
@@ -108,19 +110,15 @@ export const RoomDetailsPage = () => {
   if (error || !room) {
     return (
       <div className="min-h-screen bg-[#F1EDEA] flex flex-col items-center justify-center p-4 select-none">
-        <div className="border-2 border-dashed border-[#212121]/30 p-8 text-center bg-white space-y-4 max-w-md">
-          <div className="font-mono text-sm font-bold text-[#212121] flex items-center justify-center gap-2">
-            <AlertCircle size={16} className="text-[#C84B31]" />
-            <span>Stay Not Found</span>
+        <div className="w-full max-w-md space-y-4">
+          <ErrorBanner error={error || new Error('This property is not available in our listings.')} />
+          <div className="text-center">
+            <Link to="/explore">
+              <Button variant="primary" size="sm" className="mt-2">
+                Back to Listings
+              </Button>
+            </Link>
           </div>
-          <p className="font-sans text-xs text-[#212121]/60">
-            {error || 'This property is not available in our listings.'}
-          </p>
-          <Link to="/explore">
-            <Button variant="primary" size="sm" className="mt-2">
-              Back to Listings
-            </Button>
-          </Link>
         </div>
       </div>
     );
@@ -234,9 +232,7 @@ export const RoomDetailsPage = () => {
                     Leave a Review
                   </h4>
                   {reviewError && (
-                    <div className="bg-[#C84B31] text-white border border-[#212121] p-2 mb-3 font-mono text-[10px] font-bold">
-                      {reviewError.toUpperCase()}
-                    </div>
+                    <ErrorBanner error={reviewError} className="mb-3 shadow-none border" onClose={() => setReviewError(null)} />
                   )}
                   {reviewSuccess && (
                     <div className="bg-[#F1EDEA] text-emerald-800 border border-[#212121] p-2 mb-3 font-mono text-[10px] font-bold">

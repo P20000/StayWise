@@ -5,6 +5,7 @@ import { setUser } from '../store/slices/authSlice';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
+import { ErrorBanner } from '../components/common/ErrorBanner';
 import { MapPin, Search, Navigation, Check, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
@@ -18,7 +19,7 @@ export const VendorSetupPage = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [statusMessage, setStatusMessage] = useState({ type: '', text: '', errorObj: null });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export const VendorSetupPage = () => {
     setStatusMessage({
       type: 'success',
       text: `Location matched via Nominatim: [${parseFloat(sug.lon).toFixed(4)}, ${parseFloat(sug.lat).toFixed(4)}]`,
+      errorObj: null,
     });
   };
 
@@ -77,11 +79,12 @@ export const VendorSetupPage = () => {
       setStatusMessage({
         type: 'error',
         text: 'Geolocation is not supported by your browser.',
+        errorObj: new Error('Geolocation unsupported.'),
       });
       return;
     }
     setGpsLoading(true);
-    setStatusMessage({ type: '', text: '' });
+    setStatusMessage({ type: '', text: '', errorObj: null });
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -107,6 +110,7 @@ export const VendorSetupPage = () => {
         setStatusMessage({
           type: 'success',
           text: `Direct GPS tracking completed: [${longitude.toFixed(4)}, ${latitude.toFixed(4)}]`,
+          errorObj: null,
         });
       },
       (error) => {
@@ -114,6 +118,7 @@ export const VendorSetupPage = () => {
         setStatusMessage({
           type: 'error',
           text: `GPS Access Denied: ${error.message}. Please use manual search.`,
+          errorObj: error,
         });
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -125,11 +130,12 @@ export const VendorSetupPage = () => {
       setStatusMessage({
         type: 'error',
         text: 'Please input a business location address.',
+        errorObj: new Error('Missing address input.'),
       });
       return;
     }
     setSaving(true);
-    setStatusMessage({ type: '', text: '' });
+    setStatusMessage({ type: '', text: '', errorObj: null });
 
     try {
       const response = await api.put('/users/profile', {
@@ -144,6 +150,7 @@ export const VendorSetupPage = () => {
       setStatusMessage({
         type: 'success',
         text: '[SUCCESS] Vendor Setup details committed successfully. Redirecting to Panel...',
+        errorObj: null,
       });
       setTimeout(() => {
         navigate('/vendor/dashboard');
@@ -152,6 +159,7 @@ export const VendorSetupPage = () => {
       setStatusMessage({
         type: 'error',
         text: err.response?.data?.message || '[SETUP_ERROR] Saving profile failed.',
+        errorObj: err,
       });
     } finally {
       setSaving(false);
@@ -174,14 +182,18 @@ export const VendorSetupPage = () => {
         </div>
 
         {statusMessage.text && (
-          <div
-            className={`border-2 border-[#212121] p-4 font-mono text-xs font-bold flex items-center gap-2 shadow-[3px_3px_0px_#212121] ${
-              statusMessage.type === 'success' ? 'bg-[#F1EDEA] text-emerald-800' : 'bg-[#C84B31] text-white'
-            }`}
-          >
-            {statusMessage.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
-            <span>{statusMessage.text.toUpperCase()}</span>
-          </div>
+          statusMessage.type === 'error' ? (
+            <ErrorBanner
+              error={statusMessage.errorObj || statusMessage.text}
+              className="mb-2 shadow-[3px_3px_0px_#212121]"
+              onClose={() => setStatusMessage({ type: '', text: '', errorObj: null })}
+            />
+          ) : (
+            <div className="border-2 border-[#212121] p-4 font-mono text-xs font-bold flex items-center gap-2 shadow-[3px_3px_0px_#212121] bg-[#F1EDEA] text-emerald-800">
+              <Check size={16} />
+              <span>{statusMessage.text.toUpperCase()}</span>
+            </div>
+          )
         )}
 
         <Card className="p-6 sm:p-8 space-y-6">
