@@ -316,8 +316,8 @@ export const AIPicksPage = () => {
                 {recommendedRooms.map((suite) => (
                   <Card
                     key={suite._id || suite.id}
-                    hoverEffect
-                    className="flex flex-col justify-between p-0 bg-white"
+                    hoverEffect={suite.status !== 'paused'}
+                    className={`flex flex-col justify-between p-0 bg-white ${suite.status === 'paused' ? 'grayscale opacity-75' : ''}`}
                   >
                     <div>
                       <div className="relative w-full h-52 border-b-2 border-[#212121] overflow-hidden bg-[#212121]">
@@ -332,13 +332,20 @@ export const AIPicksPage = () => {
                         <div className="absolute top-3 left-3">
                           <Badge variant="ai">{suite.architecturalStyle}</Badge>
                         </div>
-                        {/* Match score pill */}
-                        {suite._score !== undefined && (
-                          <div className="absolute top-3 right-3 bg-[#C84B31] text-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
-                            <Sparkles size={10} />
-                            <span>{suite._score}% match</span>
-                          </div>
-                        )}
+                        {/* Match score / status badge */}
+                        <div className="absolute top-3 right-3 flex gap-2">
+                          {suite._score !== undefined && suite.status !== 'paused' && (
+                            <div className="bg-[#C84B31] text-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
+                              <Sparkles size={10} />
+                              <span>{suite._score}% match</span>
+                            </div>
+                          )}
+                          {suite.status === 'paused' && (
+                            <Badge variant="highlight" className="border-2 border-[#212121] uppercase">
+                              UNAVAILABLE
+                            </Badge>
+                          )}
+                        </div>
                         <div className="absolute bottom-3 right-3 bg-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
                           <Star size={12} className="text-[#C84B31] fill-[#C84B31]" />
                           <span>{suite.rating}</span>
@@ -378,11 +385,17 @@ export const AIPicksPage = () => {
                           {' '}/ night
                         </span>
                       </div>
-                      <Link to={`/room/${suite.slug}`}>
-                        <Button variant="primary" size="sm">
-                          RESERVE
+                      {suite.status === 'paused' ? (
+                        <Button variant="outline" size="sm" disabled className="cursor-not-allowed opacity-50 bg-[#F1EDEA] text-[#212121]/50 border-[#212121]/30 shadow-none uppercase font-bold">
+                          UNAVAILABLE
                         </Button>
-                      </Link>
+                      ) : (
+                        <Link to={`/room/${suite.slug}`}>
+                          <Button variant="primary" size="sm">
+                            RESERVE
+                          </Button>
+                        </Link>
+                      )}
                     </div>
                   </Card>
                 ))}

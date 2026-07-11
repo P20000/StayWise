@@ -140,7 +140,11 @@ export const ExplorePage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {rooms.map((suite) => (
-              <Card key={suite._id || suite.id} hoverEffect className="flex flex-col justify-between p-0 bg-white">
+              <Card 
+                key={suite._id || suite.id} 
+                hoverEffect={suite.status !== 'paused'} 
+                className={`flex flex-col justify-between p-0 bg-white ${suite.status === 'paused' ? 'grayscale opacity-75' : ''}`}
+              >
                 <div>
                   <div className="relative w-full h-56 border-b-2 border-[#212121] overflow-hidden bg-[#212121]">
                     <img
@@ -151,6 +155,13 @@ export const ExplorePage = () => {
                     <div className="absolute top-3 left-3">
                       <Badge variant="ai">{suite.architecturalStyle}</Badge>
                     </div>
+                    {suite.status === 'paused' && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge variant="highlight" className="border-2 border-[#212121] uppercase">
+                          UNAVAILABLE
+                        </Badge>
+                      </div>
+                    )}
                     <div className="absolute bottom-3 right-3 bg-white border border-[#212121] px-2 py-0.5 shadow-[2px_2px_0px_#212121] flex items-center gap-1 font-mono text-xs font-bold">
                       <Star size={12} className="text-[#C84B31] fill-[#C84B31]" />
                       <span>{suite.rating}</span>
@@ -178,11 +189,17 @@ export const ExplorePage = () => {
                       {' '}/ night
                     </span>
                   </div>
-                  <Link to={`/room/${suite.slug}`}>
-                    <Button variant="primary" size="sm">
-                      RESERVE
+                  {suite.status === 'paused' ? (
+                    <Button variant="outline" size="sm" disabled className="cursor-not-allowed opacity-50 bg-[#F1EDEA] text-[#212121]/50 border-[#212121]/30 shadow-none uppercase font-bold">
+                      UNAVAILABLE
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link to={`/room/${suite.slug}`}>
+                      <Button variant="primary" size="sm">
+                        RESERVE
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </Card>
             ))}

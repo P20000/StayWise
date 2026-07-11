@@ -109,8 +109,8 @@ export const FeaturedHotels = () => {
             {rooms.map((suite) => (
               <Card
                 key={suite._id || suite.id}
-                hoverEffect
-                className="featured-card opacity-0 flex flex-col justify-between p-0 bg-white border-[#212121]"
+                hoverEffect={suite.status !== 'paused'}
+                className={`featured-card opacity-0 flex flex-col justify-between p-0 bg-white border-[#212121] ${suite.status === 'paused' ? 'grayscale opacity-75' : ''}`}
               >
                 <div>
                   <div className="relative w-full h-56 overflow-hidden bg-[#0a0a0a] border-b-2 border-[#212121]">
@@ -122,6 +122,13 @@ export const FeaturedHotels = () => {
                     <div className="absolute top-3 left-3">
                       <Badge variant="ai">{suite.architecturalStyle}</Badge>
                     </div>
+                    {suite.status === 'paused' && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <Badge variant="highlight" className="border-2 border-[#212121] uppercase">
+                          UNAVAILABLE
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-5">
@@ -139,12 +146,18 @@ export const FeaturedHotels = () => {
                   <span className="font-mono text-xs text-[#494440] uppercase tracking-widest font-semibold">
                     [ BESPOKE HOSTED SPACE ]
                   </span>
-                  <Link to={`/room/${suite.slug}`}>
-                    <Button variant="primary" size="sm" className="font-bold flex items-center gap-1">
-                      <span>EXPLORE SPACE</span>
-                      <ArrowUpRight size={14} />
+                  {suite.status === 'paused' ? (
+                    <Button variant="outline" size="sm" disabled className="cursor-not-allowed opacity-50 bg-[#F1EDEA] text-[#212121]/50 border-[#212121]/30 shadow-none uppercase font-bold">
+                      UNAVAILABLE
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link to={`/room/${suite.slug}`}>
+                      <Button variant="primary" size="sm" className="font-bold flex items-center gap-1">
+                        <span>EXPLORE SPACE</span>
+                        <ArrowUpRight size={14} />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </Card>
             ))}
