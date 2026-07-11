@@ -60,6 +60,134 @@ const MiniMap = ({ lat, lng }) => {
   return <div ref={containerRef} className="w-full h-36 border-b-2 border-[#212121]" />;
 };
 
+// Custom range-picker calendar for setting availability dates
+const CalendarRangePicker = ({ value, onChange }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+
+  const parseDate = (d) => {
+    if (!d) return null;
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  };
+
+  const startDate = parseDate(value.start);
+  const endDate = parseDate(value.end);
+
+  const handleDateClick = (dayNum) => {
+    const clicked = new Date(year, month, dayNum);
+    clicked.setHours(0, 0, 0, 0);
+
+    if (!startDate || (startDate && endDate)) {
+      onChange({ start: clicked, end: null });
+    } else {
+      if (clicked < startDate) {
+        onChange({ start: clicked, end: null });
+      } else {
+        onChange({ start: startDate, end: clicked });
+      }
+    }
+  };
+
+  const isSelected = (dayNum) => {
+    const d = new Date(year, month, dayNum);
+    d.setHours(0, 0, 0, 0);
+    return (startDate && d.getTime() === startDate.getTime()) || (endDate && d.getTime() === endDate.getTime());
+  };
+
+  const isInRange = (dayNum) => {
+    const d = new Date(year, month, dayNum);
+    d.setHours(0, 0, 0, 0);
+    return startDate && endDate && d > startDate && d < endDate;
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const days = [];
+  // empty cells for offset
+  for (let i = 0; i < firstDay; i++) {
+    days.push(<div key={`empty-${i}`} className="p-2 border border-transparent" />);
+  }
+  // fill days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const selected = isSelected(d);
+    const inRange = isInRange(d);
+
+    days.push(
+      <button
+        key={`day-${d}`}
+        type="button"
+        onClick={() => handleDateClick(d)}
+        className={`p-2 font-mono text-xs border border-[#212121]/10 hover:border-[#212121] transition-all cursor-pointer font-bold select-none
+          ${selected ? 'bg-[#C84B31] text-[#F1EDEA] border-[#212121] shadow-[1px_1px_0px_#212121]' : ''}
+          ${inRange ? 'bg-[#C84B31]/20 text-[#212121]' : ''}
+          ${!selected && !inRange ? 'bg-white text-[#212121]' : ''}
+        `}
+      >
+        {d}
+      </button>
+    );
+  }
+
+  return (
+    <div className="border-2 border-[#212121] p-4 bg-[#F1EDEA] shadow-[3px_3px_0px_#212121]">
+      <div className="flex items-center justify-between mb-4">
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          className="border-2 border-[#212121] bg-white px-2 py-1 text-xs font-mono font-bold uppercase shadow-[2px_2px_0px_#212121] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#212121] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_#212121]"
+        >
+          &lt;
+        </button>
+        <span className="font-mono text-xs font-bold uppercase tracking-wider">
+          {monthNames[month]} {year}
+        </span>
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          className="border-2 border-[#212121] bg-white px-2 py-1 text-xs font-mono font-bold uppercase shadow-[2px_2px_0px_#212121] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#212121] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_#212121]"
+        >
+          &gt;
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center font-mono text-[9px] font-bold text-[#212121]/50 uppercase mb-2">
+        <div>Sun</div>
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days}
+      </div>
+    </div>
+  );
+};
+
 export const VendorDashboardPage = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
@@ -103,6 +231,13 @@ export const VendorDashboardPage = () => {
   const [selectedTierForEdit, setSelectedTierForEdit] = useState(null); // When double clicking a tier
   const [showTierModal, setShowTierModal] = useState(false);
   const [draggingTierIndex, setDraggingTierIndex] = useState(null);
+
+  // --- Availability Calendar States ---
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [selectedRoomForAvailability, setSelectedRoomForAvailability] = useState(null);
+  const [selectedTierId, setSelectedTierId] = useState('');
+  const [currentAvailabilityDates, setCurrentAvailabilityDates] = useState({ start: '', end: '' });
+  const [isSavingAvailability, setIsSavingAvailability] = useState(false);
 
   // --- Support Queue States ---
   const [supportName, setSupportName] = useState('');
@@ -288,6 +423,7 @@ export const VendorDashboardPage = () => {
       basePrice: 150,
       coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
       gridPosition: { row, col },
+      numberOfRooms: 1,
       availabilityDates: { start: '', end: '' },
       services: [
         { name: 'Room cleaning', enabled: true, price: 20, priceType: 'per-night', description: 'Daily surface sanitization and linen swap.' },
@@ -332,6 +468,70 @@ export const VendorDashboardPage = () => {
       setRoomTiers(roomTiers.filter(t => t.id !== tierId));
       setShowTierModal(false);
       setSelectedTierForEdit(null);
+    }
+  };
+
+  const handleOpenAvailabilityModal = (room) => {
+    setSelectedRoomForAvailability(room);
+    if (room.roomTiers && room.roomTiers.length > 0) {
+      const firstTier = room.roomTiers[0];
+      setSelectedTierId(firstTier._id || firstTier.id);
+      setCurrentAvailabilityDates({
+        start: firstTier.availabilityDates?.start ? new Date(firstTier.availabilityDates.start) : '',
+        end: firstTier.availabilityDates?.end ? new Date(firstTier.availabilityDates.end) : ''
+      });
+    } else {
+      setSelectedTierId('');
+      setCurrentAvailabilityDates({ start: '', end: '' });
+    }
+    setShowAvailabilityModal(true);
+  };
+
+  const handleTierChange = (e) => {
+    const tierId = e.target.value;
+    setSelectedTierId(tierId);
+    const room = selectedRoomForAvailability;
+    if (!room) return;
+    const tier = room.roomTiers.find(t => (t._id || t.id) === tierId);
+    if (tier) {
+      setCurrentAvailabilityDates({
+        start: tier.availabilityDates?.start ? new Date(tier.availabilityDates.start) : '',
+        end: tier.availabilityDates?.end ? new Date(tier.availabilityDates.end) : ''
+      });
+    } else {
+      setCurrentAvailabilityDates({ start: '', end: '' });
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    if (!selectedTierId || !selectedRoomForAvailability) return;
+    setIsSavingAvailability(true);
+    try {
+      const updatedTiers = selectedRoomForAvailability.roomTiers.map(t => {
+        if ((t._id || t.id) === selectedTierId) {
+          return {
+            ...t,
+            availabilityDates: {
+              start: currentAvailabilityDates.start ? currentAvailabilityDates.start.toISOString() : '',
+              end: currentAvailabilityDates.end ? currentAvailabilityDates.end.toISOString() : ''
+            }
+          };
+        }
+        return t;
+      });
+
+      const response = await api.put(`/rooms/${selectedRoomForAvailability._id}`, {
+        roomTiers: updatedTiers
+      });
+
+      setRooms(rooms.map(r => r._id === selectedRoomForAvailability._id ? response.data.data : r));
+      alert('Availability dates updated successfully.');
+      setShowAvailabilityModal(false);
+      setSelectedRoomForAvailability(null);
+    } catch (err) {
+      alert(`Failed to save availability: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setIsSavingAvailability(false);
     }
   };
 
@@ -766,6 +966,14 @@ export const VendorDashboardPage = () => {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
+                                  onClick={() => handleOpenAvailabilityModal(room)}
+                                  title="Manage Tier Availability"
+                                >
+                                  <Calendar size={12} />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
                                   onClick={() => handleOpenEditFlow(room)}
                                   title="Edit Listing Details"
                                 >
@@ -1189,7 +1397,7 @@ export const VendorDashboardPage = () => {
                             >
                               <div>
                                 <span className="font-bold block uppercase text-[10px] text-[#212121]">{t.tierName}</span>
-                                <span className="font-mono text-[9px] text-[#C84B31]">${t.basePrice} per night</span>
+                                <span className="font-mono text-[9px] text-[#C84B31]">${t.basePrice} per night • {t.numberOfRooms || 1} room(s)</span>
                               </div>
                               <span className="text-[8px] text-[#212121]/40 group-hover:text-[#212121] font-bold">POS: R{t.gridPosition.row}-C{t.gridPosition.col} ✎</span>
                             </div>
@@ -1266,31 +1474,19 @@ export const VendorDashboardPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-bold block">AVAILABILITY START</label>
-                  <input 
-                    type="date" 
-                    value={selectedTierForEdit.availabilityDates?.start ? selectedTierForEdit.availabilityDates.start.substring(0, 10) : ''}
-                    onChange={(e) => setSelectedTierForEdit({
-                      ...selectedTierForEdit,
-                      availabilityDates: { ...selectedTierForEdit.availabilityDates, start: e.target.value }
-                    })}
-                    className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold block">AVAILABILITY END</label>
-                  <input 
-                    type="date" 
-                    value={selectedTierForEdit.availabilityDates?.end ? selectedTierForEdit.availabilityDates.end.substring(0, 10) : ''}
-                    onChange={(e) => setSelectedTierForEdit({
-                      ...selectedTierForEdit,
-                      availabilityDates: { ...selectedTierForEdit.availabilityDates, end: e.target.value }
-                    })}
-                    className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="font-bold block">NUMBER OF ROOMS</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  required
+                  value={selectedTierForEdit.numberOfRooms || 1}
+                  onChange={(e) => setSelectedTierForEdit({
+                    ...selectedTierForEdit,
+                    numberOfRooms: Math.max(1, parseInt(e.target.value) || 1)
+                  })}
+                  className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
+                />
               </div>
 
               {/* SERVICES LIST EDITOR */}
@@ -1394,6 +1590,108 @@ export const VendorDashboardPage = () => {
                   APPLY CHANGES
                 </Button>
               </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* --- AVAILABILITY CALENDAR MODAL --- */}
+      {showAvailabilityModal && selectedRoomForAvailability && (
+        <div className="fixed inset-0 z-[1050] bg-[#212121]/80 flex items-center justify-center p-4 overflow-y-auto">
+          <Card className="w-full max-w-lg bg-[#F1EDEA] border-3 border-[#212121] shadow-[8px_8px_0px_#212121] max-h-[90vh] flex flex-col p-0 font-mono text-xs">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-2 border-[#212121] p-4 bg-[#212121] text-white">
+              <h3 className="font-bold uppercase tracking-wider">[ MANAGE TIER AVAILABILITY ]</h3>
+              <button 
+                onClick={() => { setShowAvailabilityModal(false); setSelectedRoomForAvailability(null); }}
+                className="text-white hover:text-[#C84B31] transition-colors bg-transparent border-0 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-grow overflow-y-auto p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="font-bold block text-xs text-[#212121]/60 uppercase">[ Stay Name ]</label>
+                <div className="font-bold text-sm text-[#212121] uppercase tracking-wide border-b border-[#212121]/20 pb-2">
+                  {selectedRoomForAvailability.title}
+                </div>
+              </div>
+
+              {!selectedRoomForAvailability.roomTiers || selectedRoomForAvailability.roomTiers.length === 0 ? (
+                <div className="border-2 border-dashed border-[#212121]/30 p-8 text-center bg-white space-y-2">
+                  <div className="font-bold text-[#C84B31] uppercase">[ No Tiers Configured ]</div>
+                  <p className="text-[10px] text-[#212121]/60">
+                    This stay doesn't have any room tiers configured yet. Edit the stay details to configure tiers.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <label className="font-bold block text-xs text-[#212121] uppercase">SELECT ROOM TIER</label>
+                    <select
+                      value={selectedTierId}
+                      onChange={handleTierChange}
+                      className="w-full bg-white border-2 border-[#212121] p-2.5 outline-none font-mono text-xs uppercase cursor-pointer"
+                    >
+                      {selectedRoomForAvailability.roomTiers.map(t => (
+                        <option key={t._id || t.id} value={t._id || t.id}>
+                          {t.tierName} (${t.basePrice}/night - {t.numberOfRooms || 1} Rooms)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="font-bold block text-xs text-[#212121] uppercase">Availability Date Range</label>
+                    
+                    <CalendarRangePicker
+                      value={currentAvailabilityDates}
+                      onChange={(range) => setCurrentAvailabilityDates(range)}
+                    />
+                  </div>
+
+                  <div className="border border-[#212121] bg-white p-3 space-y-1.5 font-bold uppercase text-[10px] text-[#212121]">
+                    <div className="flex justify-between">
+                      <span>Start Date:</span>
+                      <span className="text-[#C84B31]">
+                        {currentAvailabilityDates.start 
+                          ? new Date(currentAvailabilityDates.start).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                          : 'NOT SET'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-[#212121]/15 pt-1.5">
+                      <span>End Date:</span>
+                      <span className="text-[#C84B31]">
+                        {currentAvailabilityDates.end 
+                          ? new Date(currentAvailabilityDates.end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                          : 'NOT SET'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      type="button"
+                      onClick={() => setCurrentAvailabilityDates({ start: '', end: '' })}
+                      className="flex-1 bg-white font-bold"
+                    >
+                      CLEAR DATES
+                    </Button>
+                    <Button 
+                      variant="secondary" 
+                      type="button"
+                      onClick={handleSaveAvailability}
+                      disabled={isSavingAvailability}
+                      className="flex-1 font-bold bg-[#C84B31] text-white border-2 border-[#212121] shadow-[2px_2px_0px_#212121]"
+                    >
+                      {isSavingAvailability ? 'SAVING...' : 'SAVE AVAILABILITY'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
         </div>

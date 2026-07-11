@@ -92,6 +92,11 @@ const roomSchema = new mongoose.Schema(
           col: { type: Number, default: 0 }
         },
         coverImage: { type: String },
+        numberOfRooms: {
+          type: Number,
+          default: 1,
+          min: 1
+        },
         availabilityDates: {
           start: { type: Date },
           end: { type: Date }
