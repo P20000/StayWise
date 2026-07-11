@@ -803,10 +803,20 @@ export const VendorDashboardPage = () => {
   };
 
   // Calculations for Metrics
+  //
+  // Correct formula — mirrors the backend reviewController aggregate exactly:
+  //   avgRating = Σ(room.rating × room.reviewsCount) / Σ(room.reviewsCount)
+  // This is a weighted mean: a room with 10 reviews carries more weight than one with 1.
+  // Only rooms that have at least 1 verified review participate in the calculation.
+  // Rooms with reviewsCount === 0 are excluded from both numerator and denominator
+  // so they cannot inflate or deflate the portfolio score.
   const totalReviews = rooms.reduce((sum, r) => sum + (r.reviewsCount || 0), 0);
-  const avgRating = rooms.length > 0
-    ? (rooms.reduce((sum, r) => sum + (r.rating || 0), 0) / rooms.length).toFixed(2)
-    : '0.00';
+  const reviewedRooms = rooms.filter(r => r.reviewsCount > 0);
+  const avgRating = totalReviews > 0
+    ? (
+        reviewedRooms.reduce((sum, r) => sum + (r.rating * r.reviewsCount), 0) / totalReviews
+      ).toFixed(2)
+    : null; // null = no verified reviews in portfolio yet
 
   return (
     <div className="min-h-screen bg-[#F1EDEA] py-8 px-4 sm:px-6 lg:px-8">
@@ -858,10 +868,21 @@ export const VendorDashboardPage = () => {
               </Card>
               <Card className="p-4 bg-white border-2 border-[#212121] shadow-[3px_3px_0px_#212121]">
                 <span className="font-mono text-xs text-[#212121]/60 block font-bold">[ OVERALL RATING FEEDBACK ]</span>
-                <div className="flex items-center gap-2 mt-1">
-                  <Star className="text-[#C84B31] fill-[#C84B31]" size={20} />
-                  <span className="font-mono text-3xl font-bold text-[#212121]">{avgRating}</span>
-                </div>
+                {avgRating === null ? (
+                  <div className="mt-1 space-y-0.5">
+                    <span className="font-mono text-sm font-bold text-amber-600 flex items-center gap-1.5">
+                      <span className="animate-pulse">✦</span>
+                      <span>NO REVIEWS YET</span>
+                    </span>
+                    <p className="font-sans text-[10px] text-[#212121]/40">Rating appears once guests review your stays.</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Star className="text-[#C84B31] fill-[#C84B31]" size={20} />
+                    <span className="font-mono text-3xl font-bold text-[#212121]">{avgRating}</span>
+                    <span className="font-mono text-xs text-[#212121]/50 self-end pb-1">({totalReviews} reviews)</span>
+                  </div>
+                )}
               </Card>
               <Card className="p-4 bg-white border-2 border-[#212121] shadow-[3px_3px_0px_#212121]">
                 <span className="font-mono text-xs text-[#212121]/60 block font-bold">[ TOTAL BOOKINGS INVOICES ]</span>
