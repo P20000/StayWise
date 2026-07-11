@@ -4,9 +4,10 @@ const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
   }
-  // If running in production (not on localhost/127.0.0.1), use the production API endpoint
+  // If running in production (not on localhost/127.0.0.1), default to relative path
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return 'https://staywise-52dr.onrender.com/api';
+    console.warn('[API] VITE_API_BASE_URL environment variable is not defined in production. Falling back to relative path "/api".');
+    return '/api';
   }
   return 'http://localhost:5000/api';
 };
