@@ -699,30 +699,7 @@ export const VendorDashboardPage = () => {
     }
   };
 
-  const handleDuplicateListing = async (room) => {
-    try {
-      const duplicatedData = {
-        title: `${room.title} (DUPLICATE)`,
-        description: room.description,
-        location: room.location,
-        basePrice: room.basePrice,
-        architecturalStyle: room.architecturalStyle,
-        quietnessLevel: room.quietnessLevel,
-        workplaceProfile: room.workplaceProfile,
-        amenities: room.amenities,
-        locationCoordinates: room.locationCoordinates,
-        roomTiers: room.roomTiers,
-        status: 'pending', // Seed duplicated stays as pending
-      };
 
-      await api.post('/rooms', duplicatedData);
-      setSuccess('[DUPLICATE] Listing cloned successfully.');
-      fetchDashboardData();
-    } catch (err) {
-      err.message = `[DUPLICATE_ERROR] Failed to duplicate listing: ${err.message}`;
-      setError(err);
-    }
-  };
 
   const handleDeleteListingWithCheck = async (room) => {
     const confirmName = window.prompt(
@@ -955,14 +932,7 @@ export const VendorDashboardPage = () => {
                                 >
                                   {room.status === 'paused' ? <Play size={12} className="text-emerald-800" /> : <Pause size={12} className="text-amber-800" />}
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleDuplicateListing(room)}
-                                  title="Duplicate Listing"
-                                >
-                                  <Copy size={12} />
-                                </Button>
+
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
