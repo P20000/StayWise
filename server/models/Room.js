@@ -83,6 +83,35 @@ const roomSchema = new mongoose.Schema(
         default: [139.7016, 35.6580], // default Shibuya Tokyo
       },
     },
+    roomTiers: [
+      {
+        tierName: { type: String, required: true },
+        basePrice: { type: Number, required: true },
+        gridPosition: {
+          row: { type: Number, default: 0 },
+          col: { type: Number, default: 0 }
+        },
+        coverImage: { type: String },
+        availabilityDates: {
+          start: { type: Date },
+          end: { type: Date }
+        },
+        services: [
+          {
+            name: { type: String, required: true },
+            enabled: { type: Boolean, default: false },
+            price: { type: Number, default: 0 },
+            priceType: { type: String, enum: ['per-night', 'one-time'], default: 'per-night' },
+            description: { type: String }
+          }
+        ]
+      }
+    ],
+    status: {
+      type: String,
+      enum: ['active', 'pending', 'paused'],
+      default: 'active',
+    },
   },
   {
     timestamps: true,

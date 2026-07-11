@@ -37,23 +37,31 @@ export const FeaturedHotels = () => {
     if (loading) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.featured-header',
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
-          scrollTrigger: { trigger: '.featured-header', start: 'top 85%' },
-        }
-      );
-      gsap.fromTo(
-        '.featured-card',
-        { opacity: 0, y: 60 },
-        {
-          opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
-          stagger: 0.18,
-          scrollTrigger: { trigger: '.featured-card', start: 'top 88%' },
-        }
-      );
+      const header = document.querySelector('.featured-header');
+      const cards = document.querySelectorAll('.featured-card');
+
+      if (header) {
+        gsap.fromTo(
+          header,
+          { opacity: 0, y: 40 },
+          {
+            opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
+            scrollTrigger: { trigger: header, start: 'top 85%' },
+          }
+        );
+      }
+      
+      if (cards.length > 0) {
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 60 },
+          {
+            opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+            stagger: 0.18,
+            scrollTrigger: { trigger: cards[0], start: 'top 88%' },
+          }
+        );
+      }
     }, sectionRef);
 
     return () => ctx.revert();

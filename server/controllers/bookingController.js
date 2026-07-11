@@ -75,3 +75,23 @@ exports.getMyBookings = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getVendorBookings = async (req, res, next) => {
+  try {
+    const vendorRooms = await Room.find({ vendor: req.user.id });
+    const roomIds = vendorRooms.map(r => r._id);
+    
+    const bookings = await Booking.find({ room: { $in: roomIds } })
+      .populate('room', 'title location basePrice images')
+      .populate('guest', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      data: bookings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

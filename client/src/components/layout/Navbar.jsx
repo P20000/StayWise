@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../../store/slices/authSlice';
@@ -6,11 +6,13 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Building2, User, LogOut } from 'lucide-react';
 import api from '../../services/api';
+import { ProfileSettingsPanel } from '../profile/ProfileSettingsPanel';
 
 export const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -66,16 +68,22 @@ export const Navbar = () => {
           {isAuthenticated && user?.role === 'Vendor' && (
             <>
               <Link
-                to="/vendor/dashboard"
+                to="/vendor/dashboard?tab=bookings"
                 className="text-[#C84B31] hover:text-[#212121] transition-colors py-1"
               >
-                My Listings
+                Manage Bookings
               </Link>
               <Link
-                to="/vendor/setup"
+                to="/vendor/dashboard?tab=listings"
                 className="text-[#C84B31] hover:text-[#212121] transition-colors py-1"
               >
-                Setup Location
+                Listings
+              </Link>
+              <Link
+                to="/vendor/dashboard?tab=help"
+                className="text-[#C84B31] hover:text-[#212121] transition-colors py-1"
+              >
+                Help
               </Link>
             </>
           )}
@@ -91,7 +99,11 @@ export const Navbar = () => {
         <div className="flex items-center gap-3">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              <Badge variant="default" className="hidden sm:inline-flex">
+              <Badge 
+                variant="default" 
+                className="hidden sm:inline-flex cursor-pointer hover:bg-slate-200 transition-colors border-2 border-[#212121]"
+                onClick={() => setIsSettingsOpen(true)}
+              >
                 <User size={12} />
                 <span>{user?.name || user?.email || 'GUEST'}</span>
               </Badge>
@@ -121,6 +133,7 @@ export const Navbar = () => {
           )}
         </div>
       </div>
+      <ProfileSettingsPanel isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </header>
   );
 };

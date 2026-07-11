@@ -134,6 +134,9 @@ exports.createRoom = async (req, res, next) => {
       locationCoordinates: req.body.locationCoordinates
         ? (typeof req.body.locationCoordinates === 'string' ? JSON.parse(req.body.locationCoordinates) : req.body.locationCoordinates)
         : undefined,
+      roomTiers: req.body.roomTiers
+        ? (typeof req.body.roomTiers === 'string' ? JSON.parse(req.body.roomTiers) : req.body.roomTiers)
+        : undefined,
     };
 
     const room = await Room.create(roomData);
@@ -205,6 +208,12 @@ exports.updateRoom = async (req, res, next) => {
       updatedData.locationCoordinates = typeof req.body.locationCoordinates === 'string'
         ? JSON.parse(req.body.locationCoordinates)
         : req.body.locationCoordinates;
+    }
+
+    if (req.body.roomTiers) {
+      updatedData.roomTiers = typeof req.body.roomTiers === 'string'
+        ? JSON.parse(req.body.roomTiers)
+        : req.body.roomTiers;
     }
 
     // Re-generate slug if title is modified

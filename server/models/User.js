@@ -41,6 +41,25 @@ const userSchema = new mongoose.Schema(
         type: [Number], // [longitude, latitude]
       },
     },
+    phone: {
+      type: String,
+      default: '',
+    },
+    businessDetails: {
+      companyName: { type: String, default: '' },
+      taxId: { type: String, default: '' },
+      businessAddress: { type: String, default: '' },
+      paymentSetup: { type: String, default: '' },
+    },
+    notificationPreferences: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+      inApp: { type: Boolean, default: true },
+    },
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
