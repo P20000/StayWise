@@ -38,7 +38,18 @@ const initRedis = async () => {
   const url = process.env.REDIS_URL || 'redis://localhost:6379';
 
   try {
-    const client = redis.createClient({ url });
+    const client = redis.createClient({
+      url,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 2) {
+            return new Error('Redis connection attempts exhausted');
+          }
+          return 100; // retry after 100ms
+        },
+        connectTimeout: 2000 // 2 seconds timeout
+      }
+    });
 
     client.on('error', (err) => {
       // Catch socket connection errors without crashing Node process
