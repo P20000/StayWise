@@ -41,6 +41,13 @@ const MiniMap = ({ lat, lng }) => {
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRef.current);
       L.marker([lat, lng], { icon: brutalIcon }).addTo(mapRef.current);
+
+      // Force recalculation of map container dimensions once rendered
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, 200);
     }
     return () => {
       if (mapRef.current) {
@@ -180,6 +187,13 @@ export const VendorDashboardPage = () => {
         setLng(parseFloat(clickLng.toFixed(6)));
         setIsLocationSaved(false);
       });
+
+      // Force recalculation of map container dimensions once rendered
+      setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+        }
+      }, 200);
     }
 
     return () => {
@@ -692,7 +706,7 @@ export const VendorDashboardPage = () => {
                         {rooms.map((room) => (
                           <Card key={room._id} className="p-0 flex flex-col justify-between overflow-hidden bg-white border-2 border-[#212121] shadow-[5px_5px_0px_#212121] relative">
                             {/* Status Badge in corner */}
-                            <div className="absolute top-3 right-3 z-10 flex gap-2">
+                            <div className="absolute top-3 right-3 z-[1001] flex gap-2">
                               <Badge variant={room.status === 'active' ? 'success' : 'default'}>
                                 {room.status?.toUpperCase() || 'ACTIVE'}
                               </Badge>
