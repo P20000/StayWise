@@ -60,9 +60,76 @@ exports.createBookingWithLock = async (req, res, next) => {
   }
 };
 
+exports.cancelBookingLock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: '[BOOKING_NOT_FOUND] Booking not found.',
+      });
+    }
+
+    if (booking.guest.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: '[AUTH_ERROR] Not authorized to cancel this booking lock.',
+      });
+    }
+
+    if (booking.status === 'PENDING_SLOT_LOCK') {
+      booking.status = 'CANCELLED';
+      await booking.save();
+
+      try {
+        const redis = getRedisClient();
+        const checkIn = new Date(booking.checkInDate).toISOString().slice(0, 10);
+        const lockKey = `lock:room:${booking.room}:${checkIn}`;
+        await redis.del(lockKey);
+      } catch (redisErr) {
+        console.warn('[REDIS_WARN] Could not release lock on cancel:', redisErr.message);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: '[LOCK_RELEASED] Booking slot lock released and cancelled.',
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getMyBookings = async (req, res, next) => {
   try {
-    const bookings = await Booking.find({ guest: req.user.id })
+    // Lazy cleanup of expired PENDING_SLOT_LOCK bookings for this guest
+    const expiredBookings = await Booking.find({
+      guest: req.user.id,
+      status: 'PENDING_SLOT_LOCK',
+      lockExpiry: { $lt: new Date() }
+    });
+
+    if (expiredBookings.length > 0) {
+      const redis = getRedisClient();
+      for (const b of expiredBookings) {
+        b.status = 'CANCELLED';
+        await b.save();
+        try {
+          const checkIn = new Date(b.checkInDate).toISOString().slice(0, 10);
+          await redis.del(`lock:room:${b.room}:${checkIn}`);
+        } catch (e) {
+          console.warn('[REDIS_WARN] Could not release expired lock:', e.message);
+        }
+      }
+    }
+
+    const bookings = await Booking.find({
+      guest: req.user.id,
+      status: { $ne: 'CANCELLED' }
+    })
       .populate('room', 'title location basePrice images')
       .sort({ createdAt: -1 });
 
@@ -81,7 +148,31 @@ exports.getVendorBookings = async (req, res, next) => {
     const vendorRooms = await Room.find({ vendor: req.user.id });
     const roomIds = vendorRooms.map(r => r._id);
     
-    const bookings = await Booking.find({ room: { $in: roomIds } })
+    // Lazy cleanup of expired PENDING_SLOT_LOCK bookings for these rooms
+    const expiredBookings = await Booking.find({
+      room: { $in: roomIds },
+      status: 'PENDING_SLOT_LOCK',
+      lockExpiry: { $lt: new Date() }
+    });
+
+    if (expiredBookings.length > 0) {
+      const redis = getRedisClient();
+      for (const b of expiredBookings) {
+        b.status = 'CANCELLED';
+        await b.save();
+        try {
+          const checkIn = new Date(b.checkInDate).toISOString().slice(0, 10);
+          await redis.del(`lock:room:${b.room}:${checkIn}`);
+        } catch (e) {
+          console.warn('[REDIS_WARN] Could not release expired lock:', e.message);
+        }
+      }
+    }
+
+    const bookings = await Booking.find({
+      room: { $in: roomIds },
+      status: { $ne: 'CANCELLED' }
+    })
       .populate('room', 'title location basePrice images')
       .populate('guest', 'name email')
       .sort({ createdAt: -1 });

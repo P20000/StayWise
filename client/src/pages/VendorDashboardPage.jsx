@@ -1,256 +1,51 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
-import { 
-  Plus, Edit3, Trash2, Star, MapPin, Eye, X, Upload, 
-  Search, ArrowRight, HelpCircle, MessageSquare, ChevronDown, 
-  User, Check, Loader2, Play, Pause, Copy, Calendar
-} from 'lucide-react';
+import { Plus, Star } from 'lucide-react';
 import api from '../services/api';
 import { ErrorBanner } from '../components/common/ErrorBanner';
-import { gsap } from 'gsap';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Custom brutalist marker icon for Leaflet
-const brutalIcon = L.divIcon({
-  className: 'brutal-marker',
-  html: `<div style="width: 16px; height: 16px; background: #C84B31; border: 2px solid #212121; box-shadow: 2px 2px 0px #212121; transform: rotate(45deg);"></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
-});
+// Tab panels
+import VendorBookingsTab from './vendor/VendorBookingsTab';
+import VendorListingsTab from './vendor/VendorListingsTab';
+import VendorHelpTab from './vendor/VendorHelpTab';
 
-// MiniMap component for visual listing cards
-const MiniMap = ({ lat, lng }) => {
-  const containerRef = useRef(null);
-  const mapRef = useRef(null);
+// Multi-step listing form
+import VendorListingForm from './vendor/VendorListingForm';
 
-  useEffect(() => {
-    if (containerRef.current && !mapRef.current) {
-      mapRef.current = L.map(containerRef.current, {
-        zoomControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false
-      }).setView([lat, lng], 13);
+// Modals
+import VendorTierModal from './vendor/VendorTierModal';
+import VendorAvailabilityModal from './vendor/VendorAvailabilityModal';
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRef.current);
-      L.marker([lat, lng], { icon: brutalIcon }).addTo(mapRef.current);
+// Floating chat widget (fully self-contained)
+import VendorChatWidget from './vendor/VendorChatWidget';
 
-      // Force recalculation of map container dimensions once rendered
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.invalidateSize();
-        }
-      }, 200);
-    }
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [lat, lng]);
-
-  return <div ref={containerRef} className="w-full h-36 border-b-2 border-[#212121]" />;
-};
-
-// Custom range-picker calendar for setting availability dates
-const CalendarRangePicker = ({ value, onChange }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
-  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
-  const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
-
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
-
-  const parseDate = (d) => {
-    if (!d) return null;
-    const date = new Date(d);
-    date.setHours(0, 0, 0, 0);
-    return date;
-  };
-
-  const startDate = parseDate(value.start);
-  const endDate = parseDate(value.end);
-
-  const handleDateClick = (dayNum) => {
-    const clicked = new Date(year, month, dayNum);
-    clicked.setHours(0, 0, 0, 0);
-
-    if (!startDate || (startDate && endDate)) {
-      onChange({ start: clicked, end: null });
-    } else {
-      if (clicked < startDate) {
-        onChange({ start: clicked, end: null });
-      } else {
-        onChange({ start: startDate, end: clicked });
-      }
-    }
-  };
-
-  const isSelected = (dayNum) => {
-    const d = new Date(year, month, dayNum);
-    d.setHours(0, 0, 0, 0);
-    return (startDate && d.getTime() === startDate.getTime()) || (endDate && d.getTime() === endDate.getTime());
-  };
-
-  const isInRange = (dayNum) => {
-    const d = new Date(year, month, dayNum);
-    d.setHours(0, 0, 0, 0);
-    return startDate && endDate && d > startDate && d < endDate;
-  };
-
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
-
-  const days = [];
-  // empty cells for offset
-  for (let i = 0; i < firstDay; i++) {
-    days.push(<div key={`empty-${i}`} className="p-2 border border-transparent" />);
-  }
-  // fill days
-  for (let d = 1; d <= daysInMonth; d++) {
-    const selected = isSelected(d);
-    const inRange = isInRange(d);
-
-    days.push(
-      <button
-        key={`day-${d}`}
-        type="button"
-        onClick={() => handleDateClick(d)}
-        className={`p-2 font-mono text-xs border border-[#212121]/10 hover:border-[#212121] transition-all cursor-pointer font-bold select-none
-          ${selected ? 'bg-[#C84B31] text-[#F1EDEA] border-[#212121] shadow-[1px_1px_0px_#212121]' : ''}
-          ${inRange ? 'bg-[#C84B31]/20 text-[#212121]' : ''}
-          ${!selected && !inRange ? 'bg-white text-[#212121]' : ''}
-        `}
-      >
-        {d}
-      </button>
-    );
-  }
-
-  return (
-    <div className="border-2 border-[#212121] p-4 bg-[#F1EDEA] shadow-[3px_3px_0px_#212121]">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={handlePrevMonth}
-          className="border-2 border-[#212121] bg-white px-2 py-1 text-xs font-mono font-bold uppercase shadow-[2px_2px_0px_#212121] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#212121] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_#212121]"
-        >
-          &lt;
-        </button>
-        <span className="font-mono text-xs font-bold uppercase tracking-wider">
-          {monthNames[month]} {year}
-        </span>
-        <button
-          type="button"
-          onClick={handleNextMonth}
-          className="border-2 border-[#212121] bg-white px-2 py-1 text-xs font-mono font-bold uppercase shadow-[2px_2px_0px_#212121] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#212121] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_#212121]"
-        >
-          &gt;
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 text-center font-mono text-[9px] font-bold text-[#212121]/50 uppercase mb-2">
-        <div>Sun</div>
-        <div>Mon</div>
-        <div>Tue</div>
-        <div>Wed</div>
-        <div>Thu</div>
-        <div>Fri</div>
-        <div>Sat</div>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {days}
-      </div>
-    </div>
-  );
-};
-
-// Skeleton / Ghost stay card representing a loading state
-const StayCardSkeleton = () => (
-  <div className="flex flex-col justify-between overflow-hidden bg-white border-2 border-[#212121] shadow-[5px_5px_0px_#212121] relative animate-pulse h-[400px]">
-    {/* Map placeholder */}
-    <div className="w-full h-36 bg-[#212121]/10 border-b-2 border-[#212121]" />
-    {/* Content */}
-    <div className="p-5 flex-grow space-y-3">
-      <div className="h-4 bg-[#212121]/10 w-2/3 border border-[#212121]/5" />
-      <div className="h-3 bg-[#212121]/10 w-full border border-[#212121]/5" />
-      <div className="h-3 bg-[#212121]/10 w-5/6 border border-[#212121]/5" />
-      <div className="flex gap-2 pt-2">
-        <div className="h-5 bg-[#212121]/10 w-16 border border-[#212121]/5" />
-        <div className="h-5 bg-[#212121]/10 w-20 border border-[#212121]/5" />
-      </div>
-    </div>
-    {/* Actions bar placeholder */}
-    <div className="border-t-2 border-[#212121] bg-[#F1EDEA] p-3 flex justify-between items-center gap-2">
-      <div className="h-7 bg-[#212121]/10 w-24 border border-[#212121]/5" />
-      <div className="flex gap-2">
-        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
-        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
-        <div className="h-7 bg-[#212121]/10 w-7 border border-[#212121]/5" />
-      </div>
-    </div>
-  </div>
-);
-
-// Skeleton / Ghost booking card representing a loading state
-const BookingCardSkeleton = () => (
-  <div className="p-4 bg-white border-2 border-[#212121] shadow-[4px_4px_0px_#212121] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-pulse">
-    <div className="space-y-2 flex-grow">
-      <div className="h-4 bg-[#212121]/10 w-24 border border-[#212121]/5" />
-      <div className="h-5 bg-[#212121]/10 w-48 border border-[#212121]/5" />
-      <div className="h-3 bg-[#212121]/10 w-32 border border-[#212121]/5" />
-    </div>
-    <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-      <div className="h-6 bg-[#212121]/10 w-16 border border-[#212121]/5" />
-      <div className="h-4 bg-[#212121]/10 w-20 border border-[#212121]/5" />
-    </div>
-  </div>
-);
+const TABS = ['bookings', 'listings', 'help'];
 
 export const VendorDashboardPage = () => {
-  const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Active Tab: bookings | listings | help
+  // ── Tab State ──
   const [activeTab, setActiveTab] = useState('bookings');
-  
-  // Dashboard Core State
+
+  // ── Dashboard Data ──
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
 
-  // Editing / Multi-step creation state
+  // ── Editing / Form Flow ──
   const [isEditing, setIsEditing] = useState(false);
-  const [editStep, setEditStep] = useState(1); // 1: Geolocation & Info, 2: Room Grid
+  const [editStep, setEditStep] = useState(1);
   const [editingRoomId, setEditingRoomId] = useState(null);
 
-  // --- Step 1 Form Fields ---
+  // Step 1 form fields
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [address, setAddress] = useState('');
@@ -261,80 +56,47 @@ export const VendorDashboardPage = () => {
   const [workspaceProfile, setWorkspaceProfile] = useState('Dedicated Fiber & Ergonomic Task Desk');
   const [amenitiesInput, setAmenitiesInput] = useState('Acoustic Double-Glazing, High-Performance Mesh Wi-Fi');
   const [imagesFiles, setImagesFiles] = useState([]);
-  
-  // Step 1 Leaflet states
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [isLocationSaved, setIsLocationSaved] = useState(false);
   const [locationSaving, setLocationSaving] = useState(false);
 
-  // --- Step 2 Room Tier Grid Fields ---
-  // Room tiers array containing: { id, tierName, basePrice, coverImage, gridPosition: {row, col}, services: [...], availabilityDates: {start, end} }
+  // Step 2 room tier grid fields
   const [roomTiers, setRoomTiers] = useState([]);
-  const [selectedTierForEdit, setSelectedTierForEdit] = useState(null); // When double clicking a tier
+  const [selectedTierForEdit, setSelectedTierForEdit] = useState(null);
   const [showTierModal, setShowTierModal] = useState(false);
   const [draggingTierIndex, setDraggingTierIndex] = useState(null);
 
-  // --- Availability Calendar States ---
+  // Availability modal state
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [selectedRoomForAvailability, setSelectedRoomForAvailability] = useState(null);
   const [selectedTierId, setSelectedTierId] = useState('');
   const [currentAvailabilityDates, setCurrentAvailabilityDates] = useState({ start: '', end: '' });
   const [isSavingAvailability, setIsSavingAvailability] = useState(false);
 
-  // --- Support Queue States ---
-  const [supportName, setSupportName] = useState('');
-  const [supportEmail, setSupportEmail] = useState('');
-  const [supportRoomId, setSupportRoomId] = useState('');
-  const [supportCategory, setSupportCategory] = useState('Getting started');
-  const [supportMessage, setSupportMessage] = useState('');
-  const [supportSuccess, setSupportSuccess] = useState(false);
-
-  // --- Chat Widget State ---
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { sender: 'agent', text: 'Welcome to Vendor Business Support. Business hours: 09:00 - 18:00 JST. How can I help you today?' }
-  ]);
-  const [newChatMessage, setNewChatMessage] = useState('');
-
-  // Leaflet refs
-  const mapRef = useRef(null);
-  const mapInstance = useRef(null);
-  const markerInstance = useRef(null);
-
-  // Sync active tab with url search parameter ?tab=
+  // ── Sync tab from URL param ──
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab && ['bookings', 'listings', 'help'].includes(tab)) {
-      setActiveTab(tab);
-    }
+    if (tab && TABS.includes(tab)) setActiveTab(tab);
   }, [location]);
 
-  // Fetch dashboard metrics when user session is loaded
+  // ── Data fetch ──
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user]);
+    if (user) fetchDashboardData();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch Rooms
       const roomsRes = await api.get(`/rooms?vendor=${user._id || user.id}`);
       const roomsData = roomsRes.data.data || [];
       setRooms(roomsData);
-      if (user) {
-        localStorage.setItem(`stay_count_${user._id || user.id}`, roomsData.length);
-      }
-      
-      // Fetch Bookings made on this Vendor's Rooms
+      localStorage.setItem(`stay_count_${user._id || user.id}`, roomsData.length);
+
       const bookingsRes = await api.get('/bookings/vendor-bookings');
       const bookingsData = bookingsRes.data.data || [];
       setBookings(bookingsData);
-      if (user) {
-        localStorage.setItem(`booking_count_${user._id || user.id}`, bookingsData.length);
-      }
+      localStorage.setItem(`booking_count_${user._id || user.id}`, bookingsData.length);
     } catch (err) {
       err.message = `[DASHBOARD_ERROR] Could not fetch dashboard metrics: ${err.message}`;
       setError(err);
@@ -343,364 +105,15 @@ export const VendorDashboardPage = () => {
     }
   };
 
-  // --- Geolocation Step 1 Leaflet Logic ---
-  useEffect(() => {
-    if (isEditing && editStep === 1 && mapRef.current && !mapInstance.current) {
-      // Initialize map
-      mapInstance.current = L.map(mapRef.current).setView([lat, lng], 13);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(mapInstance.current);
+  // ── Metrics ──
+  const totalReviews = rooms.reduce((sum, r) => sum + (r.reviewsCount || 0), 0);
+  const reviewedRooms = rooms.filter((r) => r.reviewsCount > 0);
+  const avgRating =
+    totalReviews > 0
+      ? (reviewedRooms.reduce((sum, r) => sum + r.rating * r.reviewsCount, 0) / totalReviews).toFixed(2)
+      : null;
 
-      markerInstance.current = L.marker([lat, lng], {
-        icon: brutalIcon,
-        draggable: true
-      }).addTo(mapInstance.current);
-
-      markerInstance.current.on('dragend', () => {
-        const pos = markerInstance.current.getLatLng();
-        setLat(parseFloat(pos.lat.toFixed(6)));
-        setLng(parseFloat(pos.lng.toFixed(6)));
-        setIsLocationSaved(false);
-      });
-
-      mapInstance.current.on('click', (e) => {
-        const { lat: clickLat, lng: clickLng } = e.latlng;
-        markerInstance.current.setLatLng([clickLat, clickLng]);
-        setLat(parseFloat(clickLat.toFixed(6)));
-        setLng(parseFloat(clickLng.toFixed(6)));
-        setIsLocationSaved(false);
-      });
-
-      // Force recalculation of map container dimensions once rendered
-      setTimeout(() => {
-        if (mapInstance.current) {
-          mapInstance.current.invalidateSize();
-        }
-      }, 200);
-    }
-
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-        markerInstance.current = null;
-      }
-    };
-  }, [isEditing, editStep]);
-
-  const handleMapSearch = async () => {
-    if (!mapSearchQuery.trim()) return;
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(mapSearchQuery)}`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        const first = data[0];
-        const newLat = parseFloat(first.lat);
-        const newLng = parseFloat(first.lon);
-        
-        setLat(parseFloat(newLat.toFixed(6)));
-        setLng(parseFloat(newLng.toFixed(6)));
-        setAddress(first.display_name);
-
-        if (mapInstance.current && markerInstance.current) {
-          mapInstance.current.setView([newLat, newLng], 14);
-          markerInstance.current.setLatLng([newLat, newLng]);
-        }
-        setIsLocationSaved(false);
-      } else {
-        alert("Zero geolocation matches found.");
-      }
-    } catch (err) {
-      console.error("Geocoding failed", err);
-    }
-  };
-
-  const handleSaveLocation = async () => {
-    setLocationSaving(true);
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-      const data = await response.json();
-      if (data && data.display_name) {
-        setAddress(data.display_name);
-      } else {
-        setAddress(`Coordinates [${lat}, ${lng}]`);
-      }
-      setIsLocationSaved(true);
-    } catch (err) {
-      setAddress(`Coordinates [${lat}, ${lng}]`);
-      setIsLocationSaved(true);
-    } finally {
-      setLocationSaving(false);
-    }
-  };
-
-  // --- Step 2 Grid Constructor Logic ---
-  const handleProceedToStep2 = () => {
-    if (!title.trim() || !desc.trim() || !address.trim()) {
-      alert("Please fill out Title, Description, and Save Geolocation Address first.");
-      return;
-    }
-    if (!isLocationSaved) {
-      alert("Please click 'Save Location' to finalize coordinates and resolve address details.");
-      return;
-    }
-
-    setEditStep(2);
-    // GSAP Slide animation
-    setTimeout(() => {
-      const container = document.getElementById('grid-editor-container');
-      if (container) {
-        gsap.fromTo(container, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4 });
-      }
-    }, 50);
-  };
-
-  const handleBackToStep1 = () => {
-    setEditStep(1);
-  };
-
-  const handleCellClick = (row, col) => {
-    // Check if cell is empty
-    const existing = roomTiers.find(t => t.gridPosition?.row === row && t.gridPosition?.col === col);
-    if (existing) return; // double-click to edit, single click on occupied does nothing
-
-    // Create a new tier in this position
-    const newTier = {
-      id: `temp-${Date.now()}`,
-      tierName: `Room Tier ${roomTiers.length + 1}`,
-      basePrice: 150,
-      coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-      gridPosition: { row, col },
-      numberOfRooms: 1,
-      availabilityDates: { start: '', end: '' },
-      services: [
-        { name: 'Room cleaning', enabled: true, price: 20, priceType: 'per-night', description: 'Daily surface sanitization and linen swap.' },
-        { name: 'Laundry', enabled: false, price: 15, priceType: 'one-time', description: 'Up to 5kg wash and press.' },
-        { name: 'Meal plans (Breakfast)', enabled: false, price: 25, priceType: 'per-night', description: 'Fresh continental buffet served in architectural gallery.' },
-        { name: 'Spa & massage sessions', enabled: false, price: 80, priceType: 'one-time', description: '60 minutes deep tissue body recovery.' },
-        { name: 'Airport pickup & drop', enabled: false, price: 50, priceType: 'one-time', description: 'Private Tesla chauffeur from terminal.' },
-        { name: 'Extra bed / crib add-on', enabled: false, price: 30, priceType: 'per-night', description: 'Premium memory-foam mattress crib.' },
-        { name: 'Mini-bar restock', enabled: false, price: 40, priceType: 'one-time', description: 'Craft beers, organic juices, and raw snacks.' },
-        { name: 'Wi-Fi tier upgrades', enabled: false, price: 10, priceType: 'per-night', description: '10 Gbps dedicated fiber priority pipe.' },
-        { name: 'Parking slot booking', enabled: false, price: 15, priceType: 'per-night', description: 'Secure subterranean garage slot.' },
-        { name: 'Pool & gym access passes', enabled: false, price: 25, priceType: 'per-night', description: 'Heated basalt swimming lanes access.' },
-        { name: 'Conference / banquet room reservation', enabled: false, price: 120, priceType: 'one-time', description: 'Cast-iron boardroom, holds up to 12 members.' }
-      ]
-    };
-
-    setRoomTiers([...roomTiers, newTier]);
-  };
-
-  const handleOpenTierEditor = (tier) => {
-    setSelectedTierForEdit({ ...tier });
-    setShowTierModal(true);
-  };
-
-  const handleSaveTierDetails = () => {
-    if (!selectedTierForEdit.tierName.trim()) {
-      alert("Tier name is required.");
-      return;
-    }
-    if (selectedTierForEdit.basePrice <= 0) {
-      alert("Base rate must be greater than zero.");
-      return;
-    }
-
-    setRoomTiers(roomTiers.map(t => t.id === selectedTierForEdit.id ? selectedTierForEdit : t));
-    setShowTierModal(false);
-    setSelectedTierForEdit(null);
-  };
-
-  const handleRemoveTier = (tierId) => {
-    if (window.confirm("Remove this room tier?")) {
-      setRoomTiers(roomTiers.filter(t => t.id !== tierId));
-      setShowTierModal(false);
-      setSelectedTierForEdit(null);
-    }
-  };
-
-  const handleOpenAvailabilityModal = (room) => {
-    setSelectedRoomForAvailability(room);
-    if (room.roomTiers && room.roomTiers.length > 0) {
-      const firstTier = room.roomTiers[0];
-      setSelectedTierId(firstTier._id || firstTier.id);
-      setCurrentAvailabilityDates({
-        start: firstTier.availabilityDates?.start ? new Date(firstTier.availabilityDates.start) : '',
-        end: firstTier.availabilityDates?.end ? new Date(firstTier.availabilityDates.end) : ''
-      });
-    } else {
-      setSelectedTierId('');
-      setCurrentAvailabilityDates({ start: '', end: '' });
-    }
-    setShowAvailabilityModal(true);
-  };
-
-  const handleTierChange = (e) => {
-    const tierId = e.target.value;
-    setSelectedTierId(tierId);
-    const room = selectedRoomForAvailability;
-    if (!room) return;
-    const tier = room.roomTiers.find(t => (t._id || t.id) === tierId);
-    if (tier) {
-      setCurrentAvailabilityDates({
-        start: tier.availabilityDates?.start ? new Date(tier.availabilityDates.start) : '',
-        end: tier.availabilityDates?.end ? new Date(tier.availabilityDates.end) : ''
-      });
-    } else {
-      setCurrentAvailabilityDates({ start: '', end: '' });
-    }
-  };
-
-  const handleSaveAvailability = async () => {
-    if (!selectedTierId || !selectedRoomForAvailability) return;
-    setIsSavingAvailability(true);
-    try {
-      const updatedTiers = selectedRoomForAvailability.roomTiers.map(t => {
-        if ((t._id || t.id) === selectedTierId) {
-          return {
-            ...t,
-            availabilityDates: {
-              start: currentAvailabilityDates.start ? currentAvailabilityDates.start.toISOString() : '',
-              end: currentAvailabilityDates.end ? currentAvailabilityDates.end.toISOString() : ''
-            }
-          };
-        }
-        return t;
-      });
-
-      const response = await api.put(`/rooms/${selectedRoomForAvailability._id}`, {
-        roomTiers: updatedTiers
-      });
-
-      setRooms(rooms.map(r => r._id === selectedRoomForAvailability._id ? response.data.data : r));
-      alert('Availability dates updated successfully.');
-      setShowAvailabilityModal(false);
-      setSelectedRoomForAvailability(null);
-    } catch (err) {
-      alert(`Failed to save availability: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setIsSavingAvailability(false);
-    }
-  };
-
-  // --- HTML5 Drag & Drop Logic ---
-  const handleDragStart = (e, index) => {
-    setDraggingTierIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e, row, col) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e, targetRow, targetCol) => {
-    e.preventDefault();
-    if (draggingTierIndex === null) return;
-
-    const updated = [...roomTiers];
-    const dragged = { ...updated[draggingTierIndex] };
-
-    // Find if another tier occupies target row/col (for swap)
-    const existingIdx = updated.findIndex(t => t.gridPosition?.row === targetRow && t.gridPosition?.col === targetCol);
-
-    if (existingIdx !== -1) {
-      // Swap positions
-      const tempPos = { ...dragged.gridPosition };
-      dragged.gridPosition = { row: targetRow, col: targetCol };
-      updated[existingIdx].gridPosition = tempPos;
-    } else {
-      // Just move to empty position
-      dragged.gridPosition = { row: targetRow, col: targetCol };
-    }
-
-    updated[draggingTierIndex] = dragged;
-    setRoomTiers(updated);
-    setDraggingTierIndex(null);
-  };
-
-  // --- Submit to Backend ---
-  const handleSaveSetup = async () => {
-    // Validations
-    if (roomTiers.length === 0) {
-      alert("Validation Error: Please establish at least one room tier in the grid.");
-      return;
-    }
-    if (lat === 0 || lng === 0 || !address) {
-      alert("Validation Error: Invalid geographical coordinates.");
-      return;
-    }
-
-    // Verify all tiers have prices > 0 and services are valid
-    for (const tier of roomTiers) {
-      if (tier.basePrice <= 0) {
-        alert(`Validation Error: Room tier "${tier.tierName}" must have a nightly rate greater than $0.`);
-        return;
-      }
-      for (const svc of tier.services) {
-        if (svc.enabled && svc.price < 0) {
-          alert(`Validation Error: Enabled service "${svc.name}" in tier "${tier.tierName}" has an invalid negative price.`);
-          return;
-        }
-      }
-    }
-
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', desc);
-      formData.append('location', address);
-      formData.append('architecturalStyle', archStyle);
-      formData.append('quietnessLevel', acousticLevel);
-      formData.append('workplaceProfile', workspaceProfile);
-      
-      // Calculate base price as the minimum tier price
-      const minBasePrice = Math.min(...roomTiers.map(t => t.basePrice));
-      formData.append('basePrice', minBasePrice);
-
-      const amenitiesArr = amenitiesInput.split(',').map(a => a.trim()).filter(Boolean);
-      formData.append('amenities', JSON.stringify(amenitiesArr));
-
-      // Normalise coordinates
-      const coords = { type: 'Point', coordinates: [parseFloat(lng.toFixed(6)), parseFloat(lat.toFixed(6))] };
-      formData.append('locationCoordinates', JSON.stringify(coords));
-
-      // Append roomTiers
-      formData.append('roomTiers', JSON.stringify(roomTiers));
-
-      if (imagesFiles && imagesFiles.length > 0) {
-        for (let i = 0; i < imagesFiles.length; i++) {
-          formData.append('images', imagesFiles[i]);
-        }
-      }
-
-      if (editingRoomId) {
-        // Edit update
-        await api.put(`/rooms/${editingRoomId}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        setSuccess('[CONFIRMED] Architectural details updated.');
-      } else {
-        // Create new
-        await api.post('/rooms', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        setSuccess('[CONFIRMED] New modernist stay successfully published.');
-      }
-
-      setIsEditing(false);
-      fetchDashboardData();
-    } catch (err) {
-      err.message = `[REGISTRY_ERROR] Submission process aborted: ${err.response?.data?.message || err.message}`;
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- CRUD Actions from Listings Tab ---
+  // ── CRUD Handlers (passed to VendorListingsTab) ──
   const handleOpenCreateFlow = () => {
     setEditingRoomId(null);
     setTitle('');
@@ -749,13 +162,10 @@ export const VendorDashboardPage = () => {
     }
   };
 
-
-
   const handleDeleteListingWithCheck = async (room) => {
     const confirmName = window.prompt(
       `[DANGER] To dismantle this stay, please type the exact title name "${room.title}":`
     );
-
     if (confirmName === room.title) {
       try {
         await api.delete(`/rooms/${room._id}`);
@@ -766,57 +176,174 @@ export const VendorDashboardPage = () => {
         setError(err);
       }
     } else {
-      alert("Dismantling aborted. Title mismatch.");
+      alert('Dismantling aborted. Title mismatch.');
     }
   };
 
-  // --- Help Tab FAQ and Support Ticket ---
-  const handleSupportSubmit = (e) => {
-    e.preventDefault();
-    if (!supportName || !supportEmail || !supportMessage) {
-      alert("Please fill all mandatory fields.");
+  // ── Availability Modal Handlers ──
+  const handleOpenAvailabilityModal = (room) => {
+    setSelectedRoomForAvailability(room);
+    if (room.roomTiers?.length > 0) {
+      const firstTier = room.roomTiers[0];
+      setSelectedTierId(firstTier._id || firstTier.id);
+      setCurrentAvailabilityDates({
+        start: firstTier.availabilityDates?.start ? new Date(firstTier.availabilityDates.start) : '',
+        end: firstTier.availabilityDates?.end ? new Date(firstTier.availabilityDates.end) : '',
+      });
+    } else {
+      setSelectedTierId('');
+      setCurrentAvailabilityDates({ start: '', end: '' });
+    }
+    setShowAvailabilityModal(true);
+  };
+
+  const handleTierChange = (e) => {
+    const tierId = e.target.value;
+    setSelectedTierId(tierId);
+    const tier = selectedRoomForAvailability?.roomTiers.find(
+      (t) => (t._id || t.id) === tierId
+    );
+    if (tier) {
+      setCurrentAvailabilityDates({
+        start: tier.availabilityDates?.start ? new Date(tier.availabilityDates.start) : '',
+        end: tier.availabilityDates?.end ? new Date(tier.availabilityDates.end) : '',
+      });
+    } else {
+      setCurrentAvailabilityDates({ start: '', end: '' });
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    if (!selectedTierId || !selectedRoomForAvailability) return;
+    setIsSavingAvailability(true);
+    try {
+      const updatedTiers = selectedRoomForAvailability.roomTiers.map((t) => {
+        if ((t._id || t.id) === selectedTierId) {
+          return {
+            ...t,
+            availabilityDates: {
+              start: currentAvailabilityDates.start
+                ? currentAvailabilityDates.start.toISOString()
+                : '',
+              end: currentAvailabilityDates.end
+                ? currentAvailabilityDates.end.toISOString()
+                : '',
+            },
+          };
+        }
+        return t;
+      });
+
+      const response = await api.put(`/rooms/${selectedRoomForAvailability._id}`, {
+        roomTiers: updatedTiers,
+      });
+
+      setRooms((prev) =>
+        prev.map((r) => (r._id === selectedRoomForAvailability._id ? response.data.data : r))
+      );
+      alert('Availability dates updated successfully.');
+      setShowAvailabilityModal(false);
+      setSelectedRoomForAvailability(null);
+    } catch (err) {
+      alert(`Failed to save availability: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setIsSavingAvailability(false);
+    }
+  };
+
+  // ── Tier Modal Handlers ──
+  const handleSaveTierDetails = () => {
+    if (!selectedTierForEdit.tierName.trim()) {
+      alert('Tier name is required.');
       return;
     }
-    setSupportSuccess(true);
-    setSupportName('');
-    setSupportEmail('');
-    setSupportMessage('');
-    setTimeout(() => setSupportSuccess(false), 5000);
+    if (selectedTierForEdit.basePrice <= 0) {
+      alert('Base rate must be greater than zero.');
+      return;
+    }
+    setRoomTiers((prev) =>
+      prev.map((t) => (t.id === selectedTierForEdit.id ? selectedTierForEdit : t))
+    );
+    setShowTierModal(false);
+    setSelectedTierForEdit(null);
   };
 
-  // --- Live Chat Logic ---
-  const handleSendChatMessage = () => {
-    if (!newChatMessage.trim()) return;
-    const userMsg = { sender: 'user', text: newChatMessage };
-    setChatMessages(prev => [...prev, userMsg]);
-    setNewChatMessage('');
+  const handleRemoveTier = (tierId) => {
+    if (window.confirm('Remove this room tier?')) {
+      setRoomTiers((prev) => prev.filter((t) => t.id !== tierId));
+      setShowTierModal(false);
+      setSelectedTierForEdit(null);
+    }
+  };
 
-    setTimeout(() => {
-      let reply = "Support Agent: I've logged this request with your partner account details. We will respond via email shortly.";
-      if (newChatMessage.toLowerCase().includes('map') || newChatMessage.toLowerCase().includes('location')) {
-        reply = "Support Agent: To set up geolocation, pick coordinates directly from Leaflet, type search area, and hit 'Save Location'.";
-      } else if (newChatMessage.toLowerCase().includes('price') || newChatMessage.toLowerCase().includes('tier')) {
-        reply = "Support Agent: Double click a room tier box inside Step 2 grid constructor to customize rates and toggle available services.";
+  // ── Form Submit (backend) ──
+  const handleSaveSetup = async () => {
+    if (roomTiers.length === 0) {
+      alert('Validation Error: Please establish at least one room tier in the grid.');
+      return;
+    }
+    if (lat === 0 || lng === 0 || !address) {
+      alert('Validation Error: Invalid geographical coordinates.');
+      return;
+    }
+    for (const tier of roomTiers) {
+      if (tier.basePrice <= 0) {
+        alert(`Validation Error: Room tier "${tier.tierName}" must have a nightly rate greater than $0.`);
+        return;
       }
-      setChatMessages(prev => [...prev, { sender: 'agent', text: reply }]);
-    }, 1000);
+      for (const svc of tier.services) {
+        if (svc.enabled && svc.price < 0) {
+          alert(
+            `Validation Error: Enabled service "${svc.name}" in tier "${tier.tierName}" has an invalid negative price.`
+          );
+          return;
+        }
+      }
+    }
+
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', desc);
+      formData.append('location', address);
+      formData.append('architecturalStyle', archStyle);
+      formData.append('quietnessLevel', acousticLevel);
+      formData.append('workplaceProfile', workspaceProfile);
+      formData.append('basePrice', Math.min(...roomTiers.map((t) => t.basePrice)));
+      formData.append('amenities', JSON.stringify(amenitiesInput.split(',').map((a) => a.trim()).filter(Boolean)));
+      formData.append(
+        'locationCoordinates',
+        JSON.stringify({ type: 'Point', coordinates: [parseFloat(lng.toFixed(6)), parseFloat(lat.toFixed(6))] })
+      );
+      formData.append('roomTiers', JSON.stringify(roomTiers));
+      if (imagesFiles?.length > 0) {
+        for (let i = 0; i < imagesFiles.length; i++) formData.append('images', imagesFiles[i]);
+      }
+
+      if (editingRoomId) {
+        await api.put(`/rooms/${editingRoomId}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        setSuccess('[CONFIRMED] Architectural details updated.');
+      } else {
+        await api.post('/rooms', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        setSuccess('[CONFIRMED] New modernist stay successfully published.');
+      }
+
+      setIsEditing(false);
+      fetchDashboardData();
+    } catch (err) {
+      err.message = `[REGISTRY_ERROR] Submission process aborted: ${err.response?.data?.message || err.message}`;
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Calculations for Metrics
-  //
-  // Correct formula — mirrors the backend reviewController aggregate exactly:
-  //   avgRating = Σ(room.rating × room.reviewsCount) / Σ(room.reviewsCount)
-  // This is a weighted mean: a room with 10 reviews carries more weight than one with 1.
-  // Only rooms that have at least 1 verified review participate in the calculation.
-  // Rooms with reviewsCount === 0 are excluded from both numerator and denominator
-  // so they cannot inflate or deflate the portfolio score.
-  const totalReviews = rooms.reduce((sum, r) => sum + (r.reviewsCount || 0), 0);
-  const reviewedRooms = rooms.filter(r => r.reviewsCount > 0);
-  const avgRating = totalReviews > 0
-    ? (
-        reviewedRooms.reduce((sum, r) => sum + (r.rating * r.reviewsCount), 0) / totalReviews
-      ).toFixed(2)
-    : null; // null = no verified reviews in portfolio yet
+  const userId = user?._id || user?.id;
 
   return (
     <div className="min-h-screen bg-[#F1EDEA] py-8 px-4 sm:px-6 lg:px-8">
@@ -829,38 +356,33 @@ export const VendorDashboardPage = () => {
         {success && (
           <div className="bg-emerald-800 text-white border-2 border-[#212121] p-4 font-mono text-xs font-bold shadow-[3px_3px_0px_#212121] flex justify-between items-center">
             <span>[ CONFIRMED ]: {success.toUpperCase()}</span>
-            <button onClick={() => setSuccess('')} className="text-white bg-transparent border-0 cursor-pointer font-bold"><X size={14} /></button>
+            <button onClick={() => setSuccess('')} className="text-white bg-transparent border-0 cursor-pointer font-bold">✕</button>
           </div>
         )}
 
-        {/* SECTION A: MAIN DASHBOARD TABS VIEW */}
+        {/* ── SECTION A: MAIN DASHBOARD VIEW ── */}
         {!isEditing ? (
           <>
-            {/* Header Area */}
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-2 border-[#212121] pb-6">
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Badge variant="terracotta">[ STAGE: PORTFOLIO OPERATION ]</Badge>
-                  {user?.vendorLocation?.address && (
-                    <span className="font-mono text-xs text-[#212121]/70 flex items-center gap-1 font-bold">
-                      <MapPin size={12} className="text-[#C84B31]" />
-                      HQ: {user.vendorLocation.address.split(',')[0]}
-                    </span>
-                  )}
-                </div>
+                <Badge variant="terracotta">[ STAGE: PORTFOLIO OPERATION ]</Badge>
                 <h1 className="font-mono text-3xl sm:text-5xl font-bold uppercase tracking-tight text-[#212121]">
                   VENDORS ARCHITECTURAL HUBS
                 </h1>
               </div>
-              <div>
-                <Button variant="primary" size="lg" onClick={handleOpenCreateFlow} className="w-full md:w-auto uppercase shadow-[4px_4px_0px_#212121]">
-                  <Plus size={16} />
-                  <span>PUBLISH NEW STAY</span>
-                </Button>
-              </div>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleOpenCreateFlow}
+                className="w-full md:w-auto uppercase shadow-[4px_4px_0px_#212121]"
+              >
+                <Plus size={16} />
+                <span>PUBLISH NEW STAY</span>
+              </Button>
             </div>
 
-            {/* Metrics cards grid */}
+            {/* Metrics cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="p-4 bg-white border-2 border-[#212121] shadow-[3px_3px_0px_#212121]">
                 <span className="font-mono text-xs text-[#212121]/60 block font-bold">[ PORTFOLIO PROPERTIES ]</span>
@@ -890,918 +412,104 @@ export const VendorDashboardPage = () => {
               </Card>
             </div>
 
-            {/* Render Tab Contents */}
-            <>
-                {/* 1. MANAGE BOOKINGS TAB */}
-                {activeTab === 'bookings' && (
-                  <div className="space-y-4">
-                    <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ INCOMING GUEST BOOKINGS ]</h2>
-                    {loading ? (
-                      <div className="space-y-4">
-                        {Array.from({ length: bookings.length > 0 ? bookings.length : (parseInt(localStorage.getItem(`booking_count_${user?._id || user?.id}`)) || 2) }).map((_, idx) => (
-                          <BookingCardSkeleton key={idx} />
-                        ))}
-                      </div>
-                    ) : bookings.length === 0 ? (
-                      <div className="border-2 border-dashed border-[#212121]/30 p-12 text-center bg-white space-y-2">
-                        <div className="font-mono text-sm font-bold text-[#212121]">[ NO ACTIVE INCOMING RESERVATIONS ]</div>
-                        <p className="font-sans text-xs text-[#212121]/60 max-w-sm mx-auto">
-                          Guest booking logs will populate here once active travelers finalize reservations at your modernist stays.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {bookings.map((booking) => (
-                          <Card key={booking._id} className="p-4 bg-white border-2 border-[#212121] shadow-[4px_4px_0px_#212121] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div className="space-y-1">
-                              <span className="font-mono text-[9px] uppercase font-bold text-[#C84B31] border border-[#C84B31] px-1 bg-[#C84B31]/5">
-                                ORDER: {booking._id.substring(12).toUpperCase()}
-                              </span>
-                              <h4 className="font-mono text-sm font-bold text-[#212121]">{booking.room?.title}</h4>
-                              <div className="flex items-center gap-3 text-[10px] text-[#212121]/70 font-semibold font-sans">
-                                <span className="flex items-center gap-1"><User size={10} /> {booking.guest?.name} ({booking.guest?.email})</span>
-                                <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(booking.checkInDate).toLocaleDateString()} - {new Date(booking.checkOutDate).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0">
-                              <div>
-                                <span className="font-mono text-xs text-[#212121]/60 block">[ REVENUE ]</span>
-                                <span className="font-mono text-lg font-bold">${booking.totalAmount} USD</span>
-                              </div>
-                              <Badge variant={booking.status === 'CONFIRMED' ? 'success' : 'default'}>
-                                {booking.status.replace(/_/g, ' ')}
-                              </Badge>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 2. LISTINGS TAB */}
-                {activeTab === 'listings' && (
-                  <div className="space-y-4">
-                    <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ YOUR PUBLISHED modernist STAYS ]</h2>
-                    {loading ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {Array.from({ length: rooms.length > 0 ? rooms.length : (parseInt(localStorage.getItem(`stay_count_${user?._id || user?.id}`)) || 3) }).map((_, idx) => (
-                          <StayCardSkeleton key={idx} />
-                        ))}
-                      </div>
-                    ) : rooms.length === 0 ? (
-                      <div className="border-2 border-dashed border-[#212121]/30 p-12 text-center bg-white space-y-2">
-                        <div className="font-mono text-sm font-bold text-[#212121]">[ PORTFOLIO IS EMPTY ]</div>
-                        <p className="font-sans text-xs text-[#212121]/60 max-w-sm mx-auto">
-                          You haven't listed any concrete lofts yet. Start setting up your geolocation.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {rooms.map((room) => (
-                          <Card key={room._id} className="p-0 flex flex-col justify-between overflow-hidden bg-white border-2 border-[#212121] shadow-[5px_5px_0px_#212121] relative">
-                            {/* Status Badge in corner */}
-                            <div className="absolute top-3 right-3 z-[1001] flex gap-2">
-                              <Badge variant={room.status === 'active' ? 'success' : 'default'}>
-                                {room.status?.toUpperCase() || 'ACTIVE'}
-                              </Badge>
-                              <Badge variant="terracotta">{room.architecturalStyle}</Badge>
-                            </div>
-
-                            <div>
-                              {/* Geo-pin map preview or thumbnail */}
-                              {room.locationCoordinates?.coordinates ? (
-                                <MiniMap 
-                                  lat={room.locationCoordinates.coordinates[1]} 
-                                  lng={room.locationCoordinates.coordinates[0]} 
-                                />
-                              ) : (
-                                <div className="w-full h-36 bg-stone-200 border-b-2 border-[#212121] flex items-center justify-center font-mono text-[10px] text-stone-500 uppercase font-bold">[ No location map set ]</div>
-                              )}
-
-                              <div className="p-5 space-y-2 font-mono">
-                                <div className="flex items-center gap-1 text-xs text-[#C84B31] font-bold">
-                                  <MapPin size={12} />
-                                  <span className="truncate max-w-[90%]">{room.location}</span>
-                                </div>
-                                <h3 className="text-lg font-bold text-[#212121] uppercase tracking-wide truncate">{room.title}</h3>
-                                <p className="font-sans text-xs text-[#212121]/70 line-clamp-2">{room.description}</p>
-                                
-                                <div className="pt-2 flex items-center gap-4 text-[10px] text-[#212121]/60 font-bold uppercase">
-                                  <span>[ Tiers: {room.roomTiers?.length || 0} ]</span>
-                                  {(!room.reviewsCount || room.reviewsCount === 0) ? (
-                                    <span className="flex items-center gap-1 text-[#C84B31] border border-[#C84B31] bg-[#C84B31]/5 px-1.5 py-0.5 text-[9px] animate-pulse">
-                                      ✦ NEWLY LISTED
-                                    </span>
-                                  ) : (
-                                    <span>[ Feedback: {room.rating} ★ ]</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Actions footer */}
-                            <div className="px-5 py-4 border-t border-[#212121] flex items-center justify-between bg-[#F1EDEA]/30">
-                              <div>
-                                <span className="text-[9px] uppercase font-bold text-[#212121]/50 block">FROM BASE PRICE</span>
-                                <span className="text-lg font-bold text-[#212121]">${room.basePrice}</span>
-                                <span className="text-[10px] text-[#212121]/60 uppercase">/ night</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleToggleStatus(room)}
-                                  title={room.status === 'paused' ? 'Activate Listing' : 'Pause Listing'}
-                                >
-                                  {room.status === 'paused' ? <Play size={12} className="text-emerald-800" /> : <Pause size={12} className="text-amber-800" />}
-                                </Button>
-
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleOpenAvailabilityModal(room)}
-                                  title="Manage Tier Availability"
-                                >
-                                  <Calendar size={12} />
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleOpenEditFlow(room)}
-                                  title="Edit Listing Details"
-                                >
-                                  <Edit3 size={12} />
-                                </Button>
-                                <Button 
-                                  variant="primary" 
-                                  size="sm" 
-                                  onClick={() => handleDeleteListingWithCheck(room)}
-                                  title="Dismantle Listing"
-                                  className="bg-[#C84B31] border border-[#212121]"
-                                >
-                                  <Trash2 size={12} />
-                                </Button>
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 3. HELP TAB Accordion FAQ */}
-                {activeTab === 'help' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    {/* FAQ Area */}
-                    <div className="lg:col-span-2 space-y-6">
-                      <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ FREQUENTLY ASKED BUSINESS INQUIRIES ]</h2>
-                      <div className="space-y-4">
-                        {[
-                          {
-                            cat: 'Getting started',
-                            q: 'How do I onboard a new architectural property listing?',
-                            a: 'Click "Publish New Stay" in the dashboard header. You will proceed through our step 1 Geolocation setup, pinpointing coordinates on Leaflet, and then transition to our 4x4 Grid room tiers config constructor.'
-                          },
-                          {
-                            cat: 'Managing bookings',
-                            q: 'How does StayWise guarantee booking dates concurrency locks?',
-                            a: 'We implement stateless high-concurrency Redis locking. When a guest attempts a checkout, the slot locks for 15 minutes. During this period, other users cannot book the same room dates.'
-                          },
-                          {
-                            cat: 'Pricing & services',
-                            q: 'Can I add customized services like dining plans or airport pickup?',
-                            a: 'Yes. In Step 2 of property creation, you can place multiple room tiers on the grid cells. Double click any room tier to toggle 11 separate customizable addon services and specify pricing structure.'
-                          },
-                          {
-                            cat: 'Geo-location setup',
-                            q: 'Why is it critical to input coordinates and address precisely?',
-                            a: 'StayWise relies on vector and geographical proximity indexing. Travel searches locate architecture within certain radii, and static previews render the map markers using this coordinate metadata.'
-                          },
-                          {
-                            cat: 'Account & billing',
-                            q: 'Where do guest payout fees route to?',
-                            a: 'All booking payments flow through Stripe. Verify your Stripe merchant id route under the profile settings slide-out panel to enable smooth processing of payout accounts.'
-                          }
-                        ].map((faq, idx) => (
-                          <details key={idx} className="group border-2 border-[#212121] bg-white p-4 shadow-[2px_2px_0px_#212121] font-mono text-xs">
-                            <summary className="font-bold flex items-center justify-between cursor-pointer list-none select-none">
-                              <div className="space-y-0.5">
-                                <span className="text-[9px] text-[#C84B31] uppercase tracking-wider font-bold">[{faq.cat}]</span>
-                                <h4 className="text-xs font-bold text-[#212121]">{faq.q}</h4>
-                              </div>
-                              <ChevronDown size={14} className="group-open:rotate-180 transition-transform duration-200" />
-                            </summary>
-                            <p className="font-sans text-xs text-[#212121]/70 mt-3 border-t border-[#212121]/10 pt-2 leading-relaxed">
-                              {faq.a}
-                            </p>
-                          </details>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Support Form Queue */}
-                    <div className="space-y-4">
-                      <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-[#212121]">[ CONTACT CONSOLE SUPPORT ]</h2>
-                      <Card className="bg-white border-2 border-[#212121] p-4 shadow-[3px_3px_0px_#212121] font-mono text-xs">
-                        {supportSuccess ? (
-                          <div className="text-center py-8 space-y-2 text-emerald-800 font-bold">
-                            <Check size={32} className="mx-auto" />
-                            <span>TICKET LOGGED IN BUSINESS QUEUE</span>
-                            <p className="text-[10px] font-sans text-stone-500">We will evaluate your ticket within 2 business hours.</p>
-                          </div>
-                        ) : (
-                          <form onSubmit={handleSupportSubmit} className="space-y-3">
-                            <div className="space-y-1">
-                              <label className="font-bold block">PARTNER NAME</label>
-                              <input 
-                                type="text" 
-                                required
-                                value={supportName}
-                                onChange={(e) => setSupportName(e.target.value)}
-                                placeholder={user?.name || "Vendor Name"} 
-                                className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="font-bold block">REPLY EMAIL</label>
-                              <input 
-                                type="email" 
-                                required
-                                value={supportEmail}
-                                onChange={(e) => setSupportEmail(e.target.value)}
-                                placeholder={user?.email || "vendor@staywise.ai"} 
-                                className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="font-bold block">ASSOCIATED LISTING</label>
-                              <select 
-                                value={supportRoomId}
-                                onChange={(e) => setSupportRoomId(e.target.value)}
-                                className="w-full bg-white border-2 border-[#212121] p-2 outline-none"
-                              >
-                                <option value="">None / General Inquiry</option>
-                                {rooms.map(r => (
-                                  <option key={r._id} value={r._id}>{r.title.substring(0, 20)}...</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="font-bold block">ISSUE CATEGORY</label>
-                              <select 
-                                value={supportCategory}
-                                onChange={(e) => setSupportCategory(e.target.value)}
-                                className="w-full bg-white border-2 border-[#212121] p-2 outline-none"
-                              >
-                                <option value="Getting started">Getting started</option>
-                                <option value="Managing bookings">Managing bookings</option>
-                                <option value="Pricing & services">Pricing & services</option>
-                                <option value="Geo-location setup">Geo-location setup</option>
-                                <option value="Account & billing">Account & billing</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="font-bold block">NARRATIVE CASE DESCRIPTION</label>
-                              <textarea 
-                                rows={3}
-                                required
-                                value={supportMessage}
-                                onChange={(e) => setSupportMessage(e.target.value)}
-                                placeholder="Describe the dashboard error or spatial mapping coordinates discrepancy..."
-                                className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs resize-none"
-                              />
-                            </div>
-                            <button 
-                              type="submit"
-                              className="w-full bg-[#212121] hover:bg-[#C84B31] text-white font-bold p-2 border-2 border-[#212121] shadow-[2px_2px_0px_#212121] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all uppercase cursor-pointer text-center"
-                            >
-                              SUBMIT TICKET
-                            </button>
-                          </form>
-                        )}
-                      </Card>
-                    </div>
-
-                  </div>
-                )}
-              </>
-          </>
-        ) : (
-          // SECTION B: MULTI-STEP CREATION FLOW VIEW
-          <div className="font-mono text-xs text-[#212121] space-y-6">
-            
-            {/* Onboarding Flow Header */}
-            <div className="border-b-2 border-[#212121] pb-4 flex justify-between items-end">
-              <div className="space-y-1">
-                <Badge variant="terracotta">[ ONBOARDING PIPELINE STEP {editStep} / 2 ]</Badge>
-                <h1 className="text-2xl font-bold uppercase">{editingRoomId ? 'EDIT SUITE REGISTRY' : 'ESTABLISH NEW ARCHITECTURAL STAY'}</h1>
-              </div>
-              <button 
-                onClick={() => { if (window.confirm("Abort current onboarding progress?")) setIsEditing(false); }}
-                className="bg-white hover:bg-[#C84B31] hover:text-white border-2 border-[#212121] px-3 py-1 font-bold shadow-[2px_2px_0px_#212121]"
-              >
-                CANCEL SETUP
-              </button>
-            </div>
-
-            {/* STEP 1: GEOLOCATION & STAY INFO DETAILS */}
-            {editStep === 1 && (
-              <div id="geolocation-container" className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                
-                {/* Form fields */}
-                <div className="border-2 border-[#212121] p-5 bg-white shadow-[4px_4px_0px_#212121] space-y-4">
-                  <div className="space-y-1">
-                    <label className="font-bold uppercase text-[#212121]">STAY TITLE</label>
-                    <input 
-                      type="text" 
-                      placeholder="THE CONCRETE PENTHOUSE" 
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2.5 outline-none font-sans text-xs" 
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold uppercase text-[#212121]">NARRATIVE SPECIFICATION DESCRIPTION</label>
-                    <textarea 
-                      rows={4}
-                      placeholder="Narrate details of design, concrete walls finishes, workspace desks..." 
-                      value={desc}
-                      onChange={(e) => setDesc(e.target.value)}
-                      className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2.5 outline-none font-sans text-xs resize-none" 
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="font-bold uppercase text-[#212121]">STYLE CATEGORY</label>
-                      <select 
-                        value={archStyle}
-                        onChange={(e) => setArchStyle(e.target.value)}
-                        className="w-full bg-white border-2 border-[#212121] p-2 outline-none"
-                      >
-                        <option value="Board-Formed Concrete">Board-Formed Concrete</option>
-                        <option value="Industrial Modernist">Industrial Modernist</option>
-                        <option value="Raw Terracotta & Stone">Raw Terracotta & Stone</option>
-                        <option value="Japanese Modern & Cedar">Japanese Modern & Cedar</option>
-                        <option value="Cast-Iron Brutalism">Cast-Iron Brutalism</option>
-                        <option value="Volcanic Basalt & Glass">Volcanic Basalt & Glass</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-bold uppercase text-[#212121]">ACOUSTIC SPEC</label>
-                      <input 
-                        type="text" 
-                        value={acousticLevel}
-                        onChange={(e) => setAcousticLevel(e.target.value)}
-                        className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold uppercase text-[#212121]">WORKPLACE AMENITIES PROFILE</label>
-                    <input 
-                      type="text" 
-                      value={workspaceProfile}
-                      onChange={(e) => setWorkspaceProfile(e.target.value)}
-                      className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="font-bold uppercase text-[#212121]">MATERIALS / SERVICES AMENITIES (COMMA SEPARATED)</label>
-                    <input 
-                      type="text" 
-                      value={amenitiesInput}
-                      onChange={(e) => setAmenitiesInput(e.target.value)}
-                      className="w-full bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                    />
-                  </div>
-
-                  <div className="space-y-2 border-2 border-[#212121] p-3 bg-white">
-                    <label className="font-bold uppercase text-[#212121] flex items-center gap-1.5 cursor-pointer">
-                      <Upload size={16} className="text-[#C84B31]" />
-                      <span>UPLOAD STAY PHOTOS (MAX 5 FILES)</span>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => setImagesFiles(e.target.files)}
-                        className="hidden"
-                      />
-                    </label>
-                    {imagesFiles && imagesFiles.length > 0 && (
-                      <div className="font-sans text-[11px] text-[#212121]/70 font-semibold space-y-1">
-                        {Array.from(imagesFiles).map((file, idx) => (
-                          <div key={idx}>• {file.name} ({Math.round(file.size / 1024)} KB)</div>
-                        ))}
-                      </div>
-                    )}
-                    {editingRoomId && (
-                      <span className="text-[10px] text-[#212121]/50 block uppercase font-bold mt-1">
-                        * Leave empty to retain current active photos.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Map picker */}
-                <div className="space-y-4">
-                  <div className="border-2 border-[#212121] p-4 bg-white shadow-[4px_4px_0px_#212121] space-y-3">
-                    <label className="font-bold uppercase text-[#212121] block">[ MAP LOCATION PINPOINT PICKER ]</label>
-                    
-                    {/* Map Search input */}
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="Search area (e.g. Shibuya, Tokyo)..." 
-                        value={mapSearchQuery}
-                        onChange={(e) => setMapSearchQuery(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleMapSearch(); }}
-                        className="flex-grow bg-[#F1EDEA]/50 border-2 border-[#212121] p-2 outline-none font-sans text-xs"
-                      />
-                      <button 
-                        type="button" 
-                        onClick={handleMapSearch}
-                        className="bg-[#212121] hover:bg-[#C84B31] text-white border-2 border-[#212121] px-3 py-2 cursor-pointer flex items-center justify-center shadow-[1px_1px_0px_#212121]"
-                      >
-                        <Search size={14} />
-                      </button>
-                    </div>
-
-                    {/* Leaflet container ref */}
-                    <div ref={mapRef} className="w-full h-80 border-2 border-[#212121] relative z-10" />
-
-                    <div className="grid grid-cols-2 gap-4 text-[10px] font-bold text-[#212121]/70 pt-1">
-                      <div>LATITUDE: {lat}</div>
-                      <div>LONGITUDE: {lng}</div>
-                    </div>
-
-                    <div className="border-t border-[#212121]/10 pt-2 flex items-center justify-between gap-4">
-                      <div className="flex-grow font-sans text-[11px] font-semibold text-[#212121]/80 max-w-[65%] truncate">
-                        {address || "[ Address not saved yet ]"}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleSaveLocation}
-                        disabled={locationSaving}
-                        className={`px-4 py-2 border-2 border-[#212121] font-bold shadow-[2px_2px_0px_#212121] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all uppercase cursor-pointer ${isLocationSaved ? 'bg-emerald-800 text-white' : 'bg-[#C84B31] text-white'}`}
-                      >
-                        {locationSaving ? 'REVERSING...' : isLocationSaved ? 'LOCATION SAVED ✓' : 'SAVE LOCATION'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Proceed CTA */}
-                  <button
-                    type="button"
-                    onClick={handleProceedToStep2}
-                    className="w-full bg-[#212121] hover:bg-[#C84B31] text-white font-bold p-3.5 border-2 border-[#212121] shadow-[4px_4px_0px_#212121] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all uppercase cursor-pointer text-center text-xs tracking-wider flex items-center justify-center gap-2"
-                  >
-                    <span>PROCEED TO ROOMS CONSTRUCTOR GRID</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-
-              </div>
-            )}
-
-            {/* STEP 2: ROOM GRID CONSTRUCTOR */}
-            {editStep === 2 && (
-              <div id="grid-editor-container" className="space-y-6">
-                
-                <div className="bg-[#212121] text-white p-4 border-2 border-[#212121] shadow-[4px_4px_0px_#212121] space-y-1">
-                  <h3 className="font-bold uppercase tracking-wider text-amber-500">[ 4x4 STRUCTURE ROOM TIERS MATRIX ]</h3>
-                  <p className="font-sans text-[11px] leading-relaxed text-stone-300">
-                    Click any empty cell block below to define a new suite tier. Double-click a placed room tier box to configure pricing, availability date window, and 11 distinct extra services. Drag and drop any room tier box to reposition or reorder them.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                  
-                  {/* The Grid Constructor Layout */}
-                  <div className="lg:col-span-2 bg-[#EAE5E0] border-2 border-[#212121] p-6 shadow-[5px_5px_0px_#212121] select-none">
-                    <div className="grid grid-cols-4 gap-4 aspect-square">
-                      {Array.from({ length: 16 }).map((_, idx) => {
-                        const row = Math.floor(idx / 4);
-                        const col = idx % 4;
-                        
-                        // Find if there is a tier in this position
-                        const tierIndex = roomTiers.findIndex(t => t.gridPosition?.row === row && t.gridPosition?.col === col);
-                        const tier = tierIndex !== -1 ? roomTiers[tierIndex] : null;
-
-                        return (
-                          <div
-                            key={idx}
-                            onDragOver={(e) => handleDragOver(e, row, col)}
-                            onDrop={(e) => handleDrop(e, row, col)}
-                            onClick={() => handleCellClick(row, col)}
-                            className={`border-2 border-dashed aspect-square flex flex-col items-center justify-center p-1 transition-all relative cursor-pointer ${tier ? 'bg-white border-[#212121] shadow-[2px_2px_0px_#212121]' : 'border-stone-400 hover:border-[#212121] hover:bg-stone-300/30'}`}
-                          >
-                            {tier ? (
-                              <div
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, tierIndex)}
-                                onDoubleClick={() => handleOpenTierEditor(tier)}
-                                className="w-full h-full flex flex-col justify-between p-1 bg-white relative group"
-                              >
-                                <div className="h-[45%] border border-[#212121] overflow-hidden bg-stone-100">
-                                  <img 
-                                    src={tier.coverImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} 
-                                    alt={tier.tierName} 
-                                    className="w-full h-full object-cover" 
-                                  />
-                                </div>
-                                <div className="flex-grow flex flex-col justify-end">
-                                  <span className="font-bold text-[9px] uppercase truncate block leading-tight text-[#212121]">{tier.tierName}</span>
-                                  <span className="font-mono text-[9px] font-bold text-[#C84B31]">${tier.basePrice}/N</span>
-                                </div>
-                                <div className="absolute inset-0 bg-[#212121]/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                  <span className="text-[9px] text-white font-bold text-center uppercase">DBL-CLK TO EDIT</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-stone-500 font-bold uppercase">[ + ADD ]</span>
-                            )}
-                            <div className="absolute bottom-1 right-1 text-[8px] text-[#212121]/30 font-bold">R{row}C{col}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Sidebar Info & Tiers List */}
-                  <div className="space-y-4">
-                    <div className="border-2 border-[#212121] p-4 bg-white shadow-[3px_3px_0px_#212121] space-y-3">
-                      <h4 className="font-bold uppercase border-b border-[#212121] pb-1">[ ESTABLISHED TIERS LIST ]</h4>
-                      {roomTiers.length === 0 ? (
-                        <p className="text-[10px] text-[#212121]/50 font-bold">No active tiers. Click a cell inside the grid to create one.</p>
-                      ) : (
-                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                          {roomTiers.map((t, index) => (
-                            <div 
-                              key={t.id} 
-                              onDoubleClick={() => handleOpenTierEditor(t)}
-                              className="border border-[#212121] p-2 bg-[#F1EDEA]/30 flex justify-between items-center group cursor-pointer hover:bg-slate-50"
-                            >
-                              <div>
-                                <span className="font-bold block uppercase text-[10px] text-[#212121]">{t.tierName}</span>
-                                <span className="font-mono text-[9px] text-[#C84B31]">${t.basePrice} per night • {t.numberOfRooms || 1} room(s)</span>
-                              </div>
-                              <span className="text-[8px] text-[#212121]/40 group-hover:text-[#212121] font-bold">POS: R{t.gridPosition.row}-C{t.gridPosition.col} ✎</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-4">
-                      <Button variant="outline" size="lg" type="button" onClick={handleBackToStep1} className="w-1/2 shadow-[2px_2px_0px_#212121]">
-                        STEP 1 INFO
-                      </Button>
-                      <Button variant="primary" size="lg" type="button" onClick={handleSaveSetup} className="w-1/2 bg-[#C84B31] text-white border-2 border-[#212121] shadow-[2px_2px_0px_#212121] font-bold">
-                        SAVE SETUP
-                      </Button>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-            )}
-
-          </div>
-        )}
-
-      </div>
-
-      {/* --- INLINE ROOM TIER CONFIGURATION MODAL --- */}
-      {showTierModal && selectedTierForEdit && (
-        <div className="fixed inset-0 z-50 bg-[#212121]/80 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-xl bg-[#F1EDEA] border-3 border-[#212121] shadow-[8px_8px_0px_#212121] max-h-[85vh] flex flex-col p-0 font-mono text-xs">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b-2 border-[#212121] p-4 bg-[#212121] text-white">
-              <h3 className="font-bold uppercase tracking-wider">[ EDIT TIER CONFIGURATION ]</h3>
-              <button 
-                onClick={() => { setShowTierModal(false); setSelectedTierForEdit(null); }}
-                className="text-white hover:text-[#C84B31] transition-colors bg-transparent border-0 cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex-grow overflow-y-auto p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-bold block">TIER TITLE NAME</label>
-                  <input 
-                    type="text" 
-                    value={selectedTierForEdit.tierName}
-                    onChange={(e) => setSelectedTierForEdit({ ...selectedTierForEdit, tierName: e.target.value })}
-                    className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold block">BASE NIGHTLY RATE ($)</label>
-                  <input 
-                    type="number" 
-                    value={selectedTierForEdit.basePrice}
-                    onChange={(e) => setSelectedTierForEdit({ ...selectedTierForEdit, basePrice: Number(e.target.value) })}
-                    className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold block">COVER IMAGE URL</label>
-                <input 
-                  type="text" 
-                  value={selectedTierForEdit.coverImage}
-                  onChange={(e) => setSelectedTierForEdit({ ...selectedTierForEdit, coverImage: e.target.value })}
-                  className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold block">NUMBER OF ROOMS</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  required
-                  value={selectedTierForEdit.numberOfRooms || 1}
-                  onChange={(e) => setSelectedTierForEdit({
-                    ...selectedTierForEdit,
-                    numberOfRooms: Math.max(1, parseInt(e.target.value) || 1)
-                  })}
-                  className="w-full bg-white border-2 border-[#212121] p-2 outline-none font-sans text-xs" 
-                />
-              </div>
-
-              {/* SERVICES LIST EDITOR */}
-              <div className="space-y-3 pt-2">
-                <label className="font-bold border-b border-[#212121] pb-1 uppercase tracking-wider block text-[#C84B31]">
-                  [ SERVICE CONFIGURATOR ]
-                </label>
-                
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                  {selectedTierForEdit.services.map((svc, sIdx) => (
-                    <div key={svc.name} className="border border-[#212121] p-3 bg-white space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold uppercase text-[10px] text-[#212121]">{svc.name}</span>
-                        <input 
-                          type="checkbox" 
-                          checked={svc.enabled}
-                          onChange={(e) => {
-                            const svcs = [...selectedTierForEdit.services];
-                            svcs[sIdx] = { ...svc, enabled: e.target.checked };
-                            setSelectedTierForEdit({ ...selectedTierForEdit, services: svcs });
-                          }}
-                          className="accent-[#C84B31] w-4 h-4 cursor-pointer"
-                        />
-                      </div>
-                      
-                      {svc.enabled && (
-                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-stone-200">
-                          <div>
-                            <span className="text-[8px] text-[#212121]/60 block font-bold">PRICE ($)</span>
-                            <input 
-                              type="number"
-                              value={svc.price}
-                              onChange={(e) => {
-                                const svcs = [...selectedTierForEdit.services];
-                                svcs[sIdx] = { ...svc, price: Number(e.target.value) };
-                                setSelectedTierForEdit({ ...selectedTierForEdit, services: svcs });
-                              }}
-                              className="w-full bg-[#F1EDEA]/50 border border-[#212121] p-1 font-sans text-[10px] outline-none" 
-                            />
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-[#212121]/60 block font-bold">PRICE TYPE</span>
-                            <select
-                              value={svc.priceType}
-                              onChange={(e) => {
-                                const svcs = [...selectedTierForEdit.services];
-                                svcs[sIdx] = { ...svc, priceType: e.target.value };
-                                setSelectedTierForEdit({ ...selectedTierForEdit, services: svcs });
-                              }}
-                              className="w-full bg-[#F1EDEA]/50 border border-[#212121] p-1 text-[10px] outline-none"
-                            >
-                              <option value="per-night">Per Night</option>
-                              <option value="one-time">One-time</option>
-                            </select>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-[#212121]/60 block font-bold">NARRATIVE DETAILS</span>
-                            <input 
-                              type="text" 
-                              value={svc.description}
-                              onChange={(e) => {
-                                const svcs = [...selectedTierForEdit.services];
-                                svcs[sIdx] = { ...svc, description: e.target.value };
-                                setSelectedTierForEdit({ ...selectedTierForEdit, services: svcs });
-                              }}
-                              placeholder="e.g. Daily drop at 08:00"
-                              className="w-full bg-[#F1EDEA]/50 border border-[#212121] p-1 font-sans text-[10px] outline-none" 
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t-2 border-[#212121] p-4 flex justify-between bg-[#F1EDEA]">
-              <button 
-                type="button" 
-                onClick={() => handleRemoveTier(selectedTierForEdit.id)}
-                className="bg-[#C84B31] text-white hover:bg-[#b53a20] font-bold px-3 py-1.5 border-2 border-[#212121] shadow-[2px_2px_0px_#212121] cursor-pointer"
-              >
-                REMOVE TIER
-              </button>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => { setShowTierModal(false); setSelectedTierForEdit(null); }}
+            {/* Tab nav */}
+            <div className="flex gap-0 border-b-2 border-[#212121]">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`font-mono text-xs font-bold uppercase px-6 py-3 border-r-2 border-[#212121] tracking-wider transition-colors cursor-pointer ${
+                    activeTab === tab
+                      ? 'bg-[#212121] text-white'
+                      : 'bg-white text-[#212121] hover:bg-[#F1EDEA]'
+                  }`}
                 >
-                  CANCEL
-                </Button>
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  onClick={handleSaveTierDetails}
-                  className="shadow-[2px_2px_0px_#212121]"
-                >
-                  APPLY CHANGES
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* --- AVAILABILITY CALENDAR MODAL --- */}
-      {showAvailabilityModal && selectedRoomForAvailability && (
-        <div className="fixed inset-0 z-[1050] bg-[#212121]/80 flex items-center justify-center p-4 overflow-y-auto">
-          <Card className="w-full max-w-lg bg-[#F1EDEA] border-3 border-[#212121] shadow-[8px_8px_0px_#212121] max-h-[90vh] flex flex-col p-0 font-mono text-xs">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b-2 border-[#212121] p-4 bg-[#212121] text-white">
-              <h3 className="font-bold uppercase tracking-wider">[ MANAGE TIER AVAILABILITY ]</h3>
-              <button 
-                onClick={() => { setShowAvailabilityModal(false); setSelectedRoomForAvailability(null); }}
-                className="text-white hover:text-[#C84B31] transition-colors bg-transparent border-0 cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex-grow overflow-y-auto p-5 space-y-4">
-              <div className="space-y-1">
-                <label className="font-bold block text-xs text-[#212121]/60 uppercase">[ Stay Name ]</label>
-                <div className="font-bold text-sm text-[#212121] uppercase tracking-wide border-b border-[#212121]/20 pb-2">
-                  {selectedRoomForAvailability.title}
-                </div>
-              </div>
-
-              {!selectedRoomForAvailability.roomTiers || selectedRoomForAvailability.roomTiers.length === 0 ? (
-                <div className="border-2 border-dashed border-[#212121]/30 p-8 text-center bg-white space-y-2">
-                  <div className="font-bold text-[#C84B31] uppercase">[ No Tiers Configured ]</div>
-                  <p className="text-[10px] text-[#212121]/60">
-                    This stay doesn't have any room tiers configured yet. Edit the stay details to configure tiers.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-1">
-                    <label className="font-bold block text-xs text-[#212121] uppercase">SELECT ROOM TIER</label>
-                    <select
-                      value={selectedTierId}
-                      onChange={handleTierChange}
-                      className="w-full bg-white border-2 border-[#212121] p-2.5 outline-none font-mono text-xs uppercase cursor-pointer"
-                    >
-                      {selectedRoomForAvailability.roomTiers.map(t => (
-                        <option key={t._id || t.id} value={t._id || t.id}>
-                          {t.tierName} (${t.basePrice}/night - {t.numberOfRooms || 1} Rooms)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="font-bold block text-xs text-[#212121] uppercase">Availability Date Range</label>
-                    
-                    <CalendarRangePicker
-                      value={currentAvailabilityDates}
-                      onChange={(range) => setCurrentAvailabilityDates(range)}
-                    />
-                  </div>
-
-                  <div className="border border-[#212121] bg-white p-3 space-y-1.5 font-bold uppercase text-[10px] text-[#212121]">
-                    <div className="flex justify-between">
-                      <span>Start Date:</span>
-                      <span className="text-[#C84B31]">
-                        {currentAvailabilityDates.start 
-                          ? new Date(currentAvailabilityDates.start).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                          : 'NOT SET'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-[#212121]/15 pt-1.5">
-                      <span>End Date:</span>
-                      <span className="text-[#C84B31]">
-                        {currentAvailabilityDates.end 
-                          ? new Date(currentAvailabilityDates.end).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                          : 'NOT SET'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      type="button"
-                      onClick={() => setCurrentAvailabilityDates({ start: '', end: '' })}
-                      className="flex-1 bg-white font-bold"
-                    >
-                      CLEAR DATES
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      type="button"
-                      onClick={handleSaveAvailability}
-                      disabled={isSavingAvailability}
-                      className="flex-1 font-bold bg-[#C84B31] text-white border-2 border-[#212121] shadow-[2px_2px_0px_#212121]"
-                    >
-                      {isSavingAvailability ? 'SAVING...' : 'SAVE AVAILABILITY'}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* --- FLOATING CHET WIDGET IN BOTTOM RIGHT --- */}
-      <div className="fixed bottom-4 right-4 z-40 font-mono text-xs">
-        {isChatOpen ? (
-          <div className="w-80 h-96 bg-[#F1EDEA] border-3 border-[#212121] shadow-[5px_5px_0px_#212121] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="bg-[#212121] text-white p-3 flex justify-between items-center border-b border-[#212121]">
-              <span className="font-bold flex items-center gap-1.5 uppercase">
-                <MessageSquare size={14} className="text-amber-500" />
-                Live Business Assistance
-              </span>
-              <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-[#C84B31] bg-transparent border-0 cursor-pointer">
-                <X size={16} />
-              </button>
-            </div>
-            
-            {/* Messages box */}
-            <div className="flex-grow p-3 space-y-2 overflow-y-auto bg-white font-sans text-xs">
-              {chatMessages.map((m, idx) => (
-                <div key={idx} className={`max-w-[85%] p-2.5 border-2 border-[#212121] shadow-[1px_1px_0px_#212121] ${m.sender === 'user' ? 'bg-[#F1EDEA] self-end ml-auto' : 'bg-stone-50'}`}>
-                  {m.text}
-                </div>
+                  {tab}
+                </button>
               ))}
             </div>
 
-            {/* Input footer */}
-            <div className="p-2 border-t-2 border-[#212121] bg-[#F1EDEA] flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Ask about maps, billing, etc..."
-                value={newChatMessage}
-                onChange={(e) => setNewChatMessage(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSendChatMessage(); }}
-                className="flex-grow border-2 border-[#212121] p-1.5 text-xs outline-none bg-white font-sans"
+            {/* Tab panels */}
+            {activeTab === 'bookings' && (
+              <VendorBookingsTab bookings={bookings} loading={loading} userId={userId} />
+            )}
+            {activeTab === 'listings' && (
+              <VendorListingsTab
+                rooms={rooms}
+                loading={loading}
+                userId={userId}
+                onEdit={handleOpenEditFlow}
+                onToggleStatus={handleToggleStatus}
+                onDelete={handleDeleteListingWithCheck}
+                onOpenAvailability={handleOpenAvailabilityModal}
               />
-              <button 
-                onClick={handleSendChatMessage}
-                className="bg-[#212121] hover:bg-[#C84B31] text-white border-2 border-[#212121] px-2 py-1 cursor-pointer font-bold"
-              >
-                SEND
-              </button>
-            </div>
-          </div>
+            )}
+            {activeTab === 'help' && (
+              <VendorHelpTab rooms={rooms} user={user} />
+            )}
+          </>
         ) : (
-          <button 
-            onClick={() => setIsChatOpen(true)}
-            className="bg-[#C84B31] hover:bg-[#b53a20] text-white border-2 border-[#212121] p-3 font-bold shadow-[3px_3px_0px_#212121] flex items-center gap-2 cursor-pointer transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none uppercase tracking-wider"
-          >
-            <MessageSquare size={16} />
-            <span>BUSINESS CHAT</span>
-          </button>
+          /* ── SECTION B: MULTI-STEP FORM ── */
+          <VendorListingForm
+            editingRoomId={editingRoomId}
+            editStep={editStep}
+            setEditStep={setEditStep}
+            title={title} setTitle={setTitle}
+            desc={desc} setDesc={setDesc}
+            address={address} setAddress={setAddress}
+            lat={lat} setLat={setLat}
+            lng={lng} setLng={setLng}
+            archStyle={archStyle} setArchStyle={setArchStyle}
+            acousticLevel={acousticLevel} setAcousticLevel={setAcousticLevel}
+            workspaceProfile={workspaceProfile} setWorkspaceProfile={setWorkspaceProfile}
+            amenitiesInput={amenitiesInput} setAmenitiesInput={setAmenitiesInput}
+            imagesFiles={imagesFiles} setImagesFiles={setImagesFiles}
+            mapSearchQuery={mapSearchQuery} setMapSearchQuery={setMapSearchQuery}
+            isLocationSaved={isLocationSaved} setIsLocationSaved={setIsLocationSaved}
+            locationSaving={locationSaving} setLocationSaving={setLocationSaving}
+            roomTiers={roomTiers} setRoomTiers={setRoomTiers}
+            selectedTierForEdit={selectedTierForEdit}
+            setSelectedTierForEdit={setSelectedTierForEdit}
+            setShowTierModal={setShowTierModal}
+            draggingTierIndex={draggingTierIndex}
+            setDraggingTierIndex={setDraggingTierIndex}
+            onSave={handleSaveSetup}
+            onCancel={() => {
+              if (window.confirm('Abort current onboarding progress?')) setIsEditing(false);
+            }}
+          />
         )}
+
       </div>
+
+      {/* ── TIER CONFIGURATION MODAL ── */}
+      {showTierModal && selectedTierForEdit && (
+        <VendorTierModal
+          tier={selectedTierForEdit}
+          onChange={setSelectedTierForEdit}
+          onSave={handleSaveTierDetails}
+          onRemove={handleRemoveTier}
+          onClose={() => { setShowTierModal(false); setSelectedTierForEdit(null); }}
+        />
+      )}
+
+      {/* ── AVAILABILITY CALENDAR MODAL ── */}
+      {showAvailabilityModal && selectedRoomForAvailability && (
+        <VendorAvailabilityModal
+          room={selectedRoomForAvailability}
+          selectedTierId={selectedTierId}
+          availabilityDates={currentAvailabilityDates}
+          isSaving={isSavingAvailability}
+          onTierChange={handleTierChange}
+          onDatesChange={setCurrentAvailabilityDates}
+          onClearDates={() => setCurrentAvailabilityDates({ start: '', end: '' })}
+          onSave={handleSaveAvailability}
+          onClose={() => { setShowAvailabilityModal(false); setSelectedRoomForAvailability(null); }}
+        />
+      )}
+
+      {/* ── FLOATING CHAT WIDGET ── */}
+      <VendorChatWidget />
 
     </div>
   );

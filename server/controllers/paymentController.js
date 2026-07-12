@@ -108,6 +108,18 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
 
     if (generatedSignature !== razorpay_signature) {
       console.error('[VERIFY_ERROR] Signature mismatch — possible tampered payload.');
+      try {
+        const failedBooking = await Booking.findById(bookingId);
+        if (failedBooking && failedBooking.status === 'PENDING_SLOT_LOCK') {
+          failedBooking.status = 'CANCELLED';
+          await failedBooking.save();
+          const redis = getRedisClient();
+          const checkIn = new Date(failedBooking.checkInDate).toISOString().slice(0, 10);
+          await redis.del(`lock:room:${failedBooking.room}:${checkIn}`);
+        }
+      } catch (cancelErr) {
+        console.warn('[REDIS_WARN] Could not release slot lock on verify mismatch:', cancelErr.message);
+      }
       return res.status(400).json({
         success: false,
         message: '[VERIFY_ERROR] Payment signature verification failed. Contact support.',
@@ -199,8 +211,20 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
   if (event === 'payment.failed' && payload) {
     const orderId = payload.order_id;
-    console.warn(`[WEBHOOK] Payment failed for order ${orderId}.`);
-    // Optionally cancel the booking / release Redis lock here
+    console.warn(`[WEBHOOK] Payment failed for order ${orderId}. Cancelling booking lock.`);
+    try {
+      const booking = await Booking.findOne({ razorpayOrderId: orderId });
+      if (booking && booking.status === 'PENDING_SLOT_LOCK') {
+        booking.status = 'CANCELLED';
+        await booking.save();
+        const redis = getRedisClient();
+        const checkIn = new Date(booking.checkInDate).toISOString().slice(0, 10);
+        await redis.del(`lock:room:${booking.room}:${checkIn}`);
+        console.log(`[WEBHOOK] Released slot lock for booking ${booking._id} after payment failure.`);
+      }
+    } catch (err) {
+      console.error('[WEBHOOK_FAIL_ERROR]', err.message);
+    }
   }
 
   res.status(200).json({ received: true });
