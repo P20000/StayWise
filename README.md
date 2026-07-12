@@ -95,6 +95,15 @@ Unlike legacy OTAs that hide markup fees until the final checkout screen, StayWi
 > [!TIP]
 > **Live Reactive Pricing:** All pricing ledgers respond instantly to state adjustments in the interactive stay stepper without triggering redundant server roundtrips.
 
+### 3. 🤖 SmartStay™ AI Recommendation Engine & Dynamic Matching
+StayWise.ai goes beyond keyword search by integrating a multi-dimensional recommendation scoring engine (`client/src/pages/AIPicksPage.jsx` & `recommenderSlice.js`) that dynamically matches properties against user lifestyle vectors:
+
+* **Tunable Preference Vectors (`setPreferences`):** Guests configure distinct architectural styles (`Modern Brutalist`, `Minimalist Zen`, `Industrial`), quietness sensitivity (`High` / `Standard`), and remote-work essentials (`Workspace Needed` / `Not Required`).
+* **Algorithmic Match Scoring (`scoreRoom`):** Every property is evaluated on the fly across vector dimensions:
+  $$\text{Score} = \min\left(100,\; \Delta_{\text{style}} + \Delta_{\text{noise}} + \Delta_{\text{workspace}}\right)$$
+  Where a direct style match contributes `+40 pts`, acoustic tolerance alignment contributes up to `+30 pts`, and high-speed fiber/desk amenity vector verification contributes up to `+30 pts`.
+* **Real-Time Match Badges (`✨ 94% match`):** The top-ranked suites dynamically display custom match percentage badges and average match KPI metrics on the dedicated `/ai-picks` portal and `SmartStayRecommender` landing widget.
+
 ---
 
 ## 🔒 End-to-End Payment & Reservation Lifecycle
