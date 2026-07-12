@@ -27,6 +27,12 @@ export const RoomDetailsPage = () => {
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
+  // Guest configuration (lives in modal)
+  const [nights, setNights] = useState(1);
+  const [numRooms, setNumRooms] = useState(1);
+  const [numAdults, setNumAdults] = useState(1);
+  const [numMinors, setNumMinors] = useState(0);
+
   // New Review form state
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
@@ -78,7 +84,15 @@ export const RoomDetailsPage = () => {
       document.body.appendChild(script);
     });
 
-  const USD_TO_INR = 85;
+  // --- Billing computation (all values in INR) ---
+  // basePrice from DB is in USD; 1 USD = 85 INR
+  const INR_PER_USD = 85;
+  const basePriceINR   = room ? Math.round(room.basePrice * INR_PER_USD) : 0;
+  const baseTotal      = basePriceINR * nights * numRooms;
+  const cleaningFeeINR = 500 * numRooms;                        // ₹500 flat per room
+  const serviceFeeINR  = Math.round(baseTotal * 0.05);          // 5% service fee
+  const gstINR         = Math.round((baseTotal + serviceFeeINR) * 0.12); // 12% GST
+  const grandTotalINR  = baseTotal + cleaningFeeINR + serviceFeeINR + gstINR;
 
   const handleConfirmReservation = async () => {
     setIsCreatingBooking(true);
@@ -86,15 +100,17 @@ export const RoomDetailsPage = () => {
     try {
       const checkInDate = new Date();
       const checkOutDate = new Date();
-      checkOutDate.setDate(checkInDate.getDate() + 3);
-      const totalAmountUSD = room.basePrice * 3 + 120;
+      checkOutDate.setDate(checkInDate.getDate() + nights);
 
       // Step 1 — Create booking slot lock in MongoDB + Redis
       const bookingRes = await api.post('/bookings', {
         roomId: room._id,
         checkInDate: checkInDate.toISOString(),
         checkOutDate: checkOutDate.toISOString(),
-        totalAmount: totalAmountUSD,
+        totalAmount: grandTotalINR,   // stored in INR
+        numRooms,
+        numAdults,
+        numMinors,
       });
       const booking = bookingRes.data.data;
 
@@ -422,7 +438,7 @@ export const RoomDetailsPage = () => {
               <div className="flex items-center justify-between border-b-2 border-[#212121] pb-4 mb-5">
                 <div>
                   <span className="font-mono text-3xl font-bold text-[#212121]">
-                    ${room.basePrice}
+                    ₹{basePriceINR.toLocaleString('en-IN')}
                   </span>
                   <span className="font-mono text-xs text-[#212121]/60 uppercase">
                     {' '}/ night
@@ -437,27 +453,39 @@ export const RoomDetailsPage = () => {
                   <div className="flex items-center justify-between">
                     <span>CHECK-IN: TODAY</span>
                     <span>→</span>
-                    <span>CHECK-OUT: +3 DAYS</span>
+                    <span>CHECK-OUT: +{nights} {nights === 1 ? 'DAY' : 'DAYS'}</span>
                   </div>
                 </div>
 
                 <div className="border-2 border-[#212121] p-3 font-mono text-xs">
                   <div className="text-[#C84B31] font-bold mb-1">[ GUESTS ]</div>
-                  <div>2 GUESTS (MAX 4)</div>
+                  <div>
+                    {numAdults} ADULT{numAdults > 1 ? 'S' : ''}
+                    {numMinors > 0 ? `, ${numMinors} MINOR${numMinors > 1 ? 'S' : ''}` : ''}
+                    {' · '}{numRooms} ROOM{numRooms > 1 ? 'S' : ''}
+                  </div>
                 </div>
 
                 <div className="space-y-2 pt-2 font-mono text-xs border-t border-[#212121]/20">
                   <div className="flex justify-between">
-                    <span>₹{(room.basePrice * 85).toLocaleString('en-IN')} × 3 nights</span>
-                    <span>₹{(room.basePrice * 3 * 85).toLocaleString('en-IN')}</span>
+                    <span>₹{basePriceINR.toLocaleString('en-IN')} × {nights}n × {numRooms}r</span>
+                    <span>₹{baseTotal.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Cleaning & Architecture Fee</span>
-                    <span>₹{(120 * 85).toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between text-[#212121]/70">
+                    <span>Cleaning fee ({numRooms} room{numRooms > 1 ? 's' : ''})</span>
+                    <span>₹{cleaningFeeINR.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-[#212121]/70">
+                    <span>Service fee (5%)</span>
+                    <span>₹{serviceFeeINR.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-[#212121]/70">
+                    <span>GST (12%)</span>
+                    <span>₹{gstINR.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between font-bold text-sm pt-2 border-t border-[#212121]">
                     <span>TOTAL DUE</span>
-                    <span>₹{((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}</span>
+                    <span>₹{grandTotalINR.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -484,6 +512,7 @@ export const RoomDetailsPage = () => {
       <Modal
         isOpen={isBookingModalOpen}
         onClose={() => {
+          if (paymentProcessing) return; // prevent closing during payment
           setIsBookingModalOpen(false);
           setBookingConfirmed(false);
           setBookingError(null);
@@ -495,9 +524,7 @@ export const RoomDetailsPage = () => {
             <div className="w-12 h-12 bg-[#C84B31] text-white flex items-center justify-center mx-auto border-2 border-[#212121] shadow-[4px_4px_0px_#212121]">
               <Check size={28} />
             </div>
-            <h4 className="font-mono text-xl font-bold text-[#212121]">
-              Booking Confirmed!
-            </h4>
+            <h4 className="font-mono text-xl font-bold text-[#212121]">Booking Confirmed!</h4>
             <p className="font-sans text-sm text-[#212121]/80">
               Your reservation is confirmed. You'll receive a confirmation email shortly.
             </p>
@@ -514,32 +541,70 @@ export const RoomDetailsPage = () => {
                 [ AWAITING PAYMENT — DO NOT CLOSE THIS WINDOW ]
               </div>
             )}
-            <div className="bg-[#F1EDEA] border-2 border-[#212121] p-4 space-y-2">
-              <div className="font-bold text-[#C84B31]">Booking Summary</div>
-              <div className="flex justify-between text-sm font-bold">
-                <span>{room.title}</span>
-                <span>₹{((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}</span>
-              </div>
-              <div className="text-[#212121]/70">Location: {room.location}</div>
-              <div className="text-[#212121]/50 text-[10px]">3 nights · incl. cleaning fee</div>
+
+            {/* Guest Configuration */}
+            <div className="border-2 border-[#212121] p-4 space-y-4">
+              <div className="font-bold text-[#C84B31] uppercase">[ Stay Configuration ]</div>
+
+              {/* Stepper helper */}
+              {[{label:'Nights', min:1, max:30, val:nights, set:setNights},
+                {label:'Rooms', min:1, max:10, val:numRooms, set:setNumRooms},
+                {label:'Adults', min:1, max:20, val:numAdults, set:setNumAdults},
+                {label:'Minors', min:0, max:10, val:numMinors, set:setNumMinors},
+              ].map(({label, min, max, val, set}) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="font-bold uppercase">{label}</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => set(Math.max(min, val - 1))}
+                      disabled={paymentProcessing || isCreatingBooking}
+                      className="w-7 h-7 border-2 border-[#212121] flex items-center justify-center font-bold text-base hover:bg-[#C84B31] hover:text-white hover:border-[#C84B31] transition-colors disabled:opacity-40"
+                    >-</button>
+                    <span className="w-6 text-center font-bold text-sm">{val}</span>
+                    <button
+                      onClick={() => set(Math.min(max, val + 1))}
+                      disabled={paymentProcessing || isCreatingBooking}
+                      className="w-7 h-7 border-2 border-[#212121] flex items-center justify-center font-bold text-base hover:bg-[#C84B31] hover:text-white hover:border-[#C84B31] transition-colors disabled:opacity-40"
+                    >+</button>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-2">
-              <label className="font-bold uppercase text-[#212121] block">
-                Email for confirmation
-              </label>
-              <input
-                type="email"
-                placeholder="guest@architectural.stay"
-                defaultValue={user?.email || "guest@staywise.ai"}
-                className="w-full bg-white border-2 border-[#212121] p-2.5 outline-none font-mono text-sm"
-              />
+            {/* Transparent Billing Breakdown */}
+            <div className="border-2 border-[#212121] p-4 space-y-2">
+              <div className="font-bold text-[#C84B31] uppercase mb-1">[ Billing Breakdown ]</div>
+              <div className="flex justify-between">
+                <span className="text-[#212121]/80">₹{basePriceINR.toLocaleString('en-IN')} × {nights} night{nights > 1 ? 's' : ''} × {numRooms} room{numRooms > 1 ? 's' : ''}</span>
+                <span className="font-bold">₹{baseTotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-[#212121]/70">
+                <span>Cleaning fee (₹500 × {numRooms} room{numRooms > 1 ? 's' : ''})</span>
+                <span>₹{cleaningFeeINR.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-[#212121]/70">
+                <span>Service fee (5%)</span>
+                <span>₹{serviceFeeINR.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between text-[#212121]/70">
+                <span>GST (12%)</span>
+                <span>₹{gstINR.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between font-bold text-sm pt-2 border-t-2 border-[#212121] mt-2">
+                <span>TOTAL DUE</span>
+                <span>₹{grandTotalINR.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="text-[#212121]/50 text-[10px] pt-1">
+                {numAdults} adult{numAdults > 1 ? 's' : ''}{numMinors > 0 ? ` + ${numMinors} minor${numMinors > 1 ? 's' : ''}` : ''}
+                {' · '}{nights} night{nights > 1 ? 's' : ''}
+                {' · '}{numRooms} room{numRooms > 1 ? 's' : ''}
+              </div>
             </div>
 
             <Button
               variant="primary"
               size="lg"
-              className="w-full mt-4"
+              className="w-full"
               onClick={handleConfirmReservation}
               disabled={isCreatingBooking || paymentProcessing}
             >
@@ -547,7 +612,7 @@ export const RoomDetailsPage = () => {
                 ? 'INITIATING...'
                 : paymentProcessing
                 ? 'AWAITING PAYMENT...'
-                : `PAY ₹${((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}`}
+                : `PAY ₹${grandTotalINR.toLocaleString('en-IN')}`}
             </Button>
           </div>
         )}
