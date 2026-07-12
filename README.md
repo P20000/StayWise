@@ -1,26 +1,147 @@
 # StayWise.ai — Luxury Hospitality & AI Precision Concession Marketplace
-\[!\[Build Status\](https://img.shields.io/badge/build-passing-emerald.svg?style=for-the-badge)\](https://staywise.ai)
-\[!\[License: MIT\](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)\](LICENSE)
-\[!\[Design: Elevated Brutalism\](https://img.shields.io/badge/Design-Elevated%20Brutalism-212121.svg?style=for-the-badge)\](docs/DESIGN.md)
-\[!\[Frontend: React\](https://img.shields.io/badge/Frontend-React%20%2B%20Tailwind-0EA5E9.svg?style=for-the-badge)\](client/)
-\[!\[Backend: Node/Express\](https://img.shields.io/badge/Backend-Node%2FExpress-339933.svg?style=for-the-badge)\](server/)
-\[!\[Database: MongoDB + Redis\](https://img.shields.io/badge/Storage-MongoDB%20%2B%20Redis-47A248.svg?style=for-the-badge)\](docs/DATABASE_SCHEMA.md)
-\[!\[Payments: Stripe & Razorpay\](https://img.shields.io/badge/Payments-Stripe%20%7C%20Razorpay-6772E5.svg?style=for-the-badge)\](docs/API_REFERENCE.md)
-\[!\[Media: Cloudinary CDN\](https://img.shields.io/badge/CDN-Cloudinary%20Memory%20Pipe-F4B400.svg?style=for-the-badge)\](docs/SECURITY.md)
+
+[![Build Status](https://img.shields.io/badge/Build-Passing-10B981?style=for-the-badge&logo=githubactions&logoColor=white)](https://staywise.ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0EA5E9?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
+[![Design: Elevated Brutalism](https://img.shields.io/badge/Design-Elevated%20Brutalism-212121?style=for-the-badge&logo=figma&logoColor=F1EDEA)](docs/DESIGN.md)
+[![Frontend: React + Vite](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Tailwind-0EA5E9?style=for-the-badge&logo=react&logoColor=white)](client/)
+[![Backend: Express API](https://img.shields.io/badge/Backend-Node.js%20%2F%20Express-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](server/)
+[![Database: MongoDB + Redis](https://img.shields.io/badge/Storage-MongoDB%20Atlas%20%2B%20Redis-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](docs/DATABASE_SCHEMA.md)
+[![Payments: Razorpay & Stripe](https://img.shields.io/badge/Payments-Razorpay%20%7C%20Stripe-6772E5?style=for-the-badge&logo=stripe&logoColor=white)](docs/API_REFERENCE.md)
+[![Media: Cloudinary CDN](https://img.shields.io/badge/CDN-Cloudinary%20Memory%20Pipe-F4B400?style=for-the-badge&logo=cloudinary&logoColor=white)](docs/SECURITY.md)
+
 ---
+
+```
++-----------------------------------------------------------------------------------+
+|  🏛️  S T A Y W I S E . A I  —  A R C H I T E C T U R A L   P R E M I U M          |
+|  B2B2C Concession Marketplace • High-Concurrency Locking • SmartStay AI Vector Engine |
++-----------------------------------------------------------------------------------+
+```
+
 ## 💡 The Pitch
-\*\*StayWise.ai\*\* is a premier B2B2C Concession Model hospitality booking platform that fuses high-trust itemized financial transparency with an \*\*Elevated Brutalism ("Architectural Premium")\*\* design aesthetic and algorithmic \*\*SmartStay AI\*\* recommendations. Engineered for ultra-high concurrency and horizontal scalability, StayWise eliminates hidden booking fees while providing real-time room availability locking and stateless cloud pipelines.
+
+**StayWise.ai** is a premier B2B2C Concession Model hospitality booking platform that fuses high-trust itemized financial transparency with an **Elevated Brutalism ("Architectural Premium")** design aesthetic and algorithmic **SmartStay AI** recommendations. Engineered for ultra-high concurrency and horizontal scalability, StayWise eliminates hidden booking fees while providing real-time room availability locking and stateless cloud pipelines.
+
+### 🌟 Why StayWise Stands Out
+* **📐 Elevated Brutalism Design System (`#212121` / `#F1EDEA`):** Raw architectural stone backgrounds, heavy charcoal structural compartments, warm brass (`#C5A059`) hardware badges, and signature terracotta (`#C84B31`) conversion triggers.
+* **💸 Itemized Concession Model Ledger:** Complete financial transparency displaying base vendor rates, exact platform concession cuts, and hospitality GST calculations with zero hidden checkout markups.
+* **🔒 Dual-Layer Concurrency Protection:** Zero double-bookings guaranteed via **Optimistic Concurrency Control (OCC via Mongoose `__v`)** combined with **Pessimistic Concurrency Control (PCC via Redis Distributed Locks)** and atomic `$elemMatch` query pipelines.
+* **🤖 SmartStay AI Vector Recommender:** Asynchronous TF-IDF hotel attribute vectorization and cosine similarity scoring cached in Redis with strict similarity threshold filtering (`✨ 94% AI MATCH`).
+
 ---
+
 ## 🏗️ 3-Tier Clean Architecture
+
+StayWise operates on a strictly decoupled, highly resilient **3-Tier Architecture** that isolates client presentation, stateless business logic, and distributed data persistence:
+
+```mermaid
+flowchart TB
+    subgraph Client ["🖥️ Tier 1: Presentation Layer (React + Vite + Tailwind CSS)"]
+        UI["React 18 Single Page Application (SPA)"]
+        Router["React Router & State Management"]
+        StayConfig["Interactive Stay Configurator (1-30 Nights / 1-10 Rooms)"]
+        CheckoutModal["Native Razorpay / Stripe Payment Checkout Iframe"]
+    end
+
+    subgraph API ["⚡ Tier 2: Stateless API Gateway (Express + Node.js)"]
+        Auth["JWT Authentication & RBAC Governance"]
+        OCC_PCC["Concurrency Manager (OCC Mongoose + PCC Redis Locks)"]
+        MediaPipe["Stateless Streamifier Memory Pipe (multer.memoryStorage)"]
+        Webhooks["Cryptographic Webhook Verifier (HMAC SHA-256 / express.raw)"]
+        SmartAI["SmartStay AI Recommender Engine (TF-IDF Vector Scorer)"]
+    end
+
+    subgraph Persistence ["🗄️ Tier 3: Persistence & Distributed Services"]
+        Mongo[(MongoDB Atlas Cluster\nSchema Validation & $elemMatch)]
+        Redis[(Upstash Redis Cache\nDistributed Locks & Idempotency)]
+        Cloudinary["Cloudinary CDN\nDirect RAM Streaming"]
+        Gateways["Stripe / Razorpay\nLive Payment Gateways"]
+    end
+
+    UI <--> Router
+    Router --> StayConfig
+    StayConfig --> Auth
+    Auth <--> OCC_PCC
+    OCC_PCC <--> Mongo
+    OCC_PCC <--> Redis
+    MediaPipe --> Cloudinary
+    SmartAI <--> Redis
+    CheckoutModal <--> Gateways
+    Gateways --> Webhooks
+    Webhooks --> Redis
+```
+
 ---
+
+## ✨ Key Features & Technical Capabilities
+
+### 1. 🎛️ Interactive Stay Configuration
+Guests have absolute flexibility when configuring stays directly on property pages:
+* **Nights Stepper:** Precise duration control from `1` up to `30` consecutive nights (`+` / `-`).
+* **Multi-Room Allocation:** Seamless allocation of `1` to `10` rooms tailored to party dynamics.
+* **Granular Guest Breakdown:** Distinct occupancy tracking (`Adults` & `Minors`) transmitted directly in API payloads (`numRooms`, `numAdults`, `numMinors`) to ensure strict compliance with hotel check-in registries.
+
+### 2. 💎 Transparent INR Concession Ledger
+Unlike legacy OTAs that hide markup fees until the final checkout screen, StayWise computes all costs live and displays them inside the sticky **Reservation Card** (`AvailabilityWidget`) and **Checkout Modal** using native Indian hospitality standards:
+
+| Component | Formula / Rule | Example Calculation (1 Room, 3 Nights @ $150/night base) |
+| :--- | :--- | :--- |
+| **Base Stay** | `₹(USD Rate × 85) × Nights × Rooms` | `₹12,750 × 3 nights × 1 room = ₹38,250` |
+| **Cleaning Fee** | **`₹500 flat per room`** | `₹500 × 1 room = ₹500` |
+| **Service Fee** | `5% of Base Stay` | `5% of ₹38,250 = ₹1,913` |
+| **Hospitality GST** | `12% of (Base Stay + Service Fee)` | `12% of ₹40,163 = ₹4,820` |
+| **Grand Total** | Sum of all component figures | **`₹45,483`** *(Fully itemized & verified)* |
+
+> [!TIP]
+> **Live Reactive Pricing:** All pricing ledgers respond instantly to state adjustments in the interactive stay stepper without triggering redundant server roundtrips.
+
+---
+
+## 🔒 End-to-End Payment & Reservation Lifecycle
+
+The transaction lifecycle is cryptographically hardened and verified server-side via HMAC SHA-256 signatures before inventory locks are released:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest as 🧑‍💼 Guest
+    participant Frontend as 🖥️ RoomDetailsPage (Client)
+    participant Backend as ⚡ Express API (Server)
+    participant Razorpay as 💳 Razorpay Live Gateway
+
+    Guest->>Frontend: Clicks "Book This Stay" & Configures Nights/Rooms
+    Frontend->>Backend: POST /api/bookings (Acquire Slot Lock in MongoDB & Redis)
+    Backend-->>Frontend: Returns Booking ID & Status 'PENDING_SLOT_LOCK'
+    Frontend->>Backend: POST /api/payments/create-order (bookingId)
+    Backend->>Razorpay: razorpay.orders.create({ amount: paise, currency: 'INR' })
+    Razorpay-->>Backend: Returns Order ID (rzp_order_...)
+    Backend-->>Frontend: Returns Order Details & Prefill Guest Metadata
+    Frontend->>Razorpay: Initializes Native Checkout Modal (Checkout.js)
+    Guest->>Razorpay: Authorizes Payment (UPI / Card / NetBanking)
+    Razorpay-->>Frontend: Returns payment_id, order_id, & signature
+    Frontend->>Backend: POST /api/payments/verify (HMAC SHA-256 Check)
+    Backend->>Backend: Verifies HMAC Signature & Finalizes OCC/PCC Lock
+    Backend-->>Frontend: Returns { success: true, status: 'CONFIRMED' }
+    Frontend->>Guest: Renders Confirmed Reservation Receipt Screen
+```
+
+> [!IMPORTANT]
+> **Idempotency & Webhook Security:** Payment webhooks rely on `express.raw()` raw body parsing and 24-hour Redis idempotency keys (`sw_rzp_whsec_...` / `stripe_whsec_...`) to eliminate duplicate charges or race conditions during high-concurrency flash sales.
+
+---
+
 ## 🚀 Quick Start Guide
-### 1. Prerequisites
-- \*\*Node.js\*\*: \`v18.0.0\` or higher (\`npm v9+\`)
-- \*\*MongoDB\*\*: Active MongoDB Atlas Cluster or local instance (\`v6.0+\`)
-- \*\*Redis\*\*: Active Upstash or AWS ElastiCache instance (\`v7.0+\`)
+
+### 1. System Prerequisites
+* **Node.js**: `v18.0.0` or higher (`npm v9+`)
+* **MongoDB**: Active MongoDB Atlas Cluster or local instance (`v6.0+`)
+* **Redis**: Active Upstash or AWS ElastiCache instance (`v7.0+`)
+
 ### 2. Repository Setup
-Clone the repository and install dependencies across the client and server:
+Clone the repository and install dependencies across both client and server workspaces:
+
 ```bash
+# Clone the StayWise repository
 git clone https://github.com/staywise-ai/StayWise.git
 cd StayWise
 
@@ -30,47 +151,53 @@ cd server && npm install
 # Install Frontend Client Dependencies
 cd ../client && npm install
 ```
+
 ### 3. Environment Variables Configuration
-Copy the sample environment templates and populate your local secrets:
+Copy the sample environment templates across both workspaces and populate your local credentials:
+
 ```bash
 # In the server directory
-cp .env.example .env
+cd server && cp .env.example .env
 
 # In the client directory
-cp .env.example .env.local
+cd ../client && cp .env.example .env.local
 ```
-\*(Refer to \[\`docs/ENVIRONMENT_VARIABLES.md\`\](docs/ENVIRONMENT_VARIABLES.md) for detailed descriptions of every required key including \`MONGO_URI\`, \`REDIS_URL\`, \`STRIPE_SECRET_KEY\`, and \`CLOUDINARY_CLOUD_NAME\`).\*
+
+*(Refer to [`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md) for detailed explanations of required keys, including `MONGO_URI`, `REDIS_URL`, `STRIPE_SECRET_KEY`, `RAZORPAY_KEY_ID`, and `CLOUDINARY_CLOUD_NAME`).*
+
 ### 4. Running Locally in Development Mode
-Start both the backend API and frontend dev server:
+Launch the API Gateway and React Client simultaneously across separate terminals:
+
 ```bash
-# Terminal 1: Start Express Backend API (Port 5000)
+# Terminal 1: Start Express Backend API Gateway (Port 5000)
 cd server && npm run dev
 
 # Terminal 2: Start React Client Dev Server (Port 5173)
 cd client && npm run dev
 ```
+
 ---
-## ✨ Key Features & Architectural Highlights
-- \*\*📐 Elevated Brutalism ("Architectural Premium") UI\*\*: Features raw bone backgrounds (\`#F1EDEA\`), heavy charcoal structural grids (\`#212121\`), warm brass hardware badges (\`#C5A059\`), and signature terracotta conversion triggers (\`#C84B31\`). See \[\`docs/DESIGN.md\`\](docs/DESIGN.md).
-- \*\*💸 Itemized Concession Model Ledger\*\*: Transparent financial breakdowns displaying base vendor nightly rates alongside StayWise platform concession cuts and exact hospitality tax calculations without hidden cart markups. See \[\`docs/PRD.md\`\](docs/PRD.md).
-- \*\*🔒 High-Concurrency Double-Booking Prevention\*\*: Combines \*\*Optimistic Concurrency Control (OCC via Mongoose \`__v\`)\*\* with \*\*Pessimistic Concurrency Control (PCC via Redis Distributed Locks)\*\* and atomic MongoDB \`\$elemMatch\` date overlap queries. See \[\`docs/DATABASE_SCHEMA.md\`\](docs/DATABASE_SCHEMA.md).
-- \*\*☁️ Stateless Cloudinary Media Pipeline\*\*: Zero local disk writes (\`no multer.diskStorage\`). All image uploads are buffered in RAM via \`multer.memoryStorage()\` and streamed directly to Cloudinary CDN via \`streamifier\`. See \[\`docs/SECURITY.md\`\](docs/SECURITY.md).
-- \*\*🛡️ Cryptographic Webhook Supremacy\*\*: Payments and booking status transitions are strictly finalized via asynchronous, signature-verified Stripe and Razorpay webhooks (\`express.raw()\`) protected by 24-hour Redis idempotency checks. See \[\`docs/API_REFERENCE.md\`\](docs/API_REFERENCE.md).
-- \*\*🤖 SmartStay AI Recommender\*\*: Asynchronous TF-IDF hotel attribute vectorization and cosine similarity scoring cached in Redis with strict similarity threshold filtering.
----
+
 ## 📚 Documentation Index
-Our engineering and operational documentation is meticulously organized inside the \`docs/\` directory:
-\| Document \| Purpose & Description \|
-\| :--- \| :--- \|
-\| \*\*\[\`docs/PRD.md\`\](docs/PRD.md)\*\* \| \*\*Product Requirements Document\*\*: Single source of truth for features, user roles, routing, and payment lifecycle. \|
-\| \*\*\[\`docs/DESIGN.md\`\](docs/DESIGN.md)\*\* \| \*\*Design System\*\*: Authoritative guidelines for Elevated Brutalism, color palettes, spacing, and UI components. \|
-\| \*\*\[\`docs/API_REFERENCE.md\`\](docs/API_REFERENCE.md)\*\* \| \*\*Engineering Contracts\*\*: Complete REST API specifications, JWT auth mechanisms, and webhook schemas. \|
-\| \*\*\[\`docs/DATABASE_SCHEMA.md\`\](docs/DATABASE_SCHEMA.md)\*\* \| \*\*Data Modeling & Concurrency\*\*: MongoDB schemas, indexes, \`bookedSlots\` arrays, and Redis locking strategies. \|
-\| \*\*\[\`docs/SECURITY.md\`\](docs/SECURITY.md)\*\* \| \*\*Security Blueprint\*\*: Rate limiting, Helmet CSP directives, RBAC boundaries, and stateless media validation. \|
-\| \*\*\[\`docs/DEPLOYMENT_GUIDE.md\`\](docs/DEPLOYMENT_GUIDE.md)\*\* \| \*\*Operations Guide\*\*: Step-by-step production deployment instructions across Vercel, Render/ECS, and Stripe CLI. \|
-\| \*\*\[\`docs/ENVIRONMENT_VARIABLES.md\`\](docs/ENVIRONMENT_VARIABLES.md)\*\*\| \*\*Secret Ledger\*\*: Master reference table for all required \`.env\` keys across client and server. \|
-\| \*\*\[\`docs/TESTING_STRATEGY.md\`\](docs/TESTING_STRATEGY.md)\*\* \| \*\*QA & Governance\*\*: Unit, integration, and concurrency load testing methodologies (\`Jest + Supertest\`). \|
-\| \*\*\[\`docs/CONTRIBUTING.md\`\](docs/CONTRIBUTING.md)\*\* \| \*\*Developer Rulebook\*\*: Branch naming, commit formatting, design rules, and state management routing rules. \|
-\| \*\*\[\`docs/AGENT.md\`\](docs/AGENT.md)\*\* \| \*\*AI Agent Workspace Rules\*\*: Automated prompt evaluation, Notion sync, and strict architectural guardrails. \|
+
+Our engineering contracts and operational runbooks are meticulously structured inside the `docs/` directory:
+
+| Document | Purpose & Description |
+| :--- | :--- |
+| **[`docs/PRD.md`](docs/PRD.md)** | **Product Requirements Document**: Master source of truth for core features, user roles, routing rules, and concession workflows. |
+| **[`docs/DESIGN.md`](docs/DESIGN.md)** | **Elevated Brutalism Design System**: Authoritative visual rules, typography (`Montserrat` / `JetBrains Mono`), color palettes (`#212121`, `#F1EDEA`, `#C84B31`), and exact Tailwind tokens. |
+| **[`docs/API_REFERENCE.md`](docs/API_REFERENCE.md)** | **Engineering Contracts**: Comprehensive REST API endpoints, JWT authentication headers, and webhook schemas. |
+| **[`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)** | **Data Modeling & Concurrency**: MongoDB schemas, compound indexes, `bookedSlots` arrays, and OCC/PCC locking algorithms. |
+| **[`docs/SECURITY.md`](docs/SECURITY.md)** | **Security Blueprint**: Rate limiting, Helmet CSP directives, RBAC isolation, and stateless RAM image streaming. |
+| **[`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md)** | **Operations & DevOps**: Production deployment runbooks for Render, Vercel, Stripe CLI, and Redis cloud configuration. |
+| **[`docs/ENVIRONMENT_VARIABLES.md`](docs/ENVIRONMENT_VARIABLES.md)**| **Secret Ledger**: Master reference matrix detailing every `.env` key required across frontend and backend services. |
+| **[`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md)** | **QA & Governance**: Unit, integration, and high-concurrency load testing methodologies (`Jest + Supertest`). |
+| **[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md)** | **Developer Rulebook**: Branching models, commit conventions, design guardrails, and PR review requirements. |
+| **[`docs/AGENT.md`](docs/AGENT.md)** | **AI Agent Workspace Rules**: Automated prompt evaluation workflows, Notion synchronization, and strict architectural guardrails. |
+
 ---
-\*Built with precision for the StayWise.ai Engineering Ecosystem.\*
+
+<div align="center">
+  <p font-mono="true"><b>Built with precision for the StayWise.ai Engineering Ecosystem.</b></p>
+  <p>🏛️ Elevated Brutalism • 🔒 Concurrency Verified • ⚡ Stateless Cloud Architecture</p>
+</div>
