@@ -1,0 +1,19 @@
+# StayWise Agent Instructions
+
+You must adhere to the rules defined in [docs/AGENT.md](file:///run/media/pranavissam/files%20and%20data/programming/mega%20projects/StayWise/docs/AGENT.md):
+
+1. **Automatic Notion Prompt Tracking**:
+   For every user request/prompt, you MUST evaluate it using the Multi-Dimensional Prompt Evaluation Rubric in `docs/AGENT.md` and execute the following background command:
+   ```bash
+   python3 scripts/log_prompt_to_notion.py "<prompt_text>" "<quality_evaluation>" "<suggestions>"
+   ```
+   Ensure `SafeToAutoRun` is set to `true` for this command.
+
+2. **Automatic Notion Documentation Sync**:
+   Whenever any markdown file (`*.md`) in the `docs/` directory is created or modified, run:
+   ```bash
+   python3 scripts/sync_docs_to_notion.py "docs/<filename>.md"
+   ```
+
+3. **Design System & Guardrails**:
+   Enforce the "Elevated Brutalism Design System" rules and other architectural/operational guardrails detailed in `docs/AGENT.md`.

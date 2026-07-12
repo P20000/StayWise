@@ -9,6 +9,7 @@ import { ErrorBanner } from '../components/common/ErrorBanner';
 import { Star, MapPin, Check, ShieldCheck, ArrowLeft, Send, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
+
 export const RoomDetailsPage = () => {
   const { slug } = useParams();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -22,6 +23,9 @@ export const RoomDetailsPage = () => {
   // Booking modal state
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
+  const [isCreatingBooking, setIsCreatingBooking] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   // New Review form state
   const [newRating, setNewRating] = useState(5);
@@ -63,13 +67,100 @@ export const RoomDetailsPage = () => {
     }
   };
 
-  const handleConfirmReservation = () => {
-    setBookingConfirmed(true);
-    setTimeout(() => {
-      setIsBookingModalOpen(false);
-      setBookingConfirmed(false);
-    }, 2000);
+  // Load Razorpay checkout.js script dynamically only when needed
+  const loadRazorpayScript = () =>
+    new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+  const USD_TO_INR = 85;
+
+  const handleConfirmReservation = async () => {
+    setIsCreatingBooking(true);
+    setBookingError(null);
+    try {
+      const checkInDate = new Date();
+      const checkOutDate = new Date();
+      checkOutDate.setDate(checkInDate.getDate() + 3);
+      const totalAmountUSD = room.basePrice * 3 + 120;
+
+      // Step 1 — Create booking slot lock in MongoDB + Redis
+      const bookingRes = await api.post('/bookings', {
+        roomId: room._id,
+        checkInDate: checkInDate.toISOString(),
+        checkOutDate: checkOutDate.toISOString(),
+        totalAmount: totalAmountUSD,
+      });
+      const booking = bookingRes.data.data;
+
+      // Step 2 — Create Razorpay order on the backend
+      const orderRes = await api.post('/payments/create-order', {
+        bookingId: booking._id,
+      });
+      const { orderId, amount, currency, keyId, prefill, description } = orderRes.data;
+
+      setIsCreatingBooking(false);
+
+      // Step 3 — Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setBookingError('Could not load the payment gateway. Please check your connection and try again.');
+        return;
+      }
+
+      // Step 4 — Open Razorpay checkout popup
+      setPaymentProcessing(true);
+      const rzp = new window.Razorpay({
+        key: keyId,
+        amount,
+        currency,
+        name: 'StayWise.ai',
+        description,
+        order_id: orderId,
+        prefill,
+        theme: { color: '#C84B31' },
+        modal: {
+          ondismiss: () => {
+            setPaymentProcessing(false);
+            setBookingError('Payment was cancelled. Your slot is held for 15 minutes — you can try again.');
+          },
+        },
+        handler: async (response) => {
+          // Step 5 — Verify the payment signature on the backend
+          try {
+            await api.post('/payments/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingId: booking._id,
+            });
+            setPaymentProcessing(false);
+            setBookingConfirmed(true);
+          } catch (verifyErr) {
+            setPaymentProcessing(false);
+            setBookingError(
+              verifyErr.response?.data?.message ||
+              'Payment was received but verification failed. Please contact support with your payment ID: ' +
+              response.razorpay_payment_id
+            );
+          }
+        },
+      });
+
+      rzp.open();
+    } catch (err) {
+      setIsCreatingBooking(false);
+      setPaymentProcessing(false);
+      console.error('[BOOKING_FLOW_ERROR]', err);
+      setBookingError(err.response?.data?.message || err.message || 'An error occurred. Please try again.');
+    }
   };
+
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
@@ -357,16 +448,16 @@ export const RoomDetailsPage = () => {
 
                 <div className="space-y-2 pt-2 font-mono text-xs border-t border-[#212121]/20">
                   <div className="flex justify-between">
-                    <span>${room.basePrice} × 3 nights</span>
-                    <span>${room.basePrice * 3}</span>
+                    <span>₹{(room.basePrice * 85).toLocaleString('en-IN')} × 3 nights</span>
+                    <span>₹{(room.basePrice * 3 * 85).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Cleaning & Architecture Fee</span>
-                    <span>$120</span>
+                    <span>₹{(120 * 85).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between font-bold text-sm pt-2 border-t border-[#212121]">
                     <span>TOTAL DUE</span>
-                    <span>${room.basePrice * 3 + 120}</span>
+                    <span>₹{((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -392,7 +483,11 @@ export const RoomDetailsPage = () => {
       {/* Booking Modal */}
       <Modal
         isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
+        onClose={() => {
+          setIsBookingModalOpen(false);
+          setBookingConfirmed(false);
+          setBookingError(null);
+        }}
         title="Confirm Your Booking"
       >
         {bookingConfirmed ? (
@@ -409,13 +504,24 @@ export const RoomDetailsPage = () => {
           </div>
         ) : (
           <div className="space-y-5 font-mono text-xs">
+            {bookingError && (
+              <div className="bg-[#F1EDEA] text-[#C84B31] border-2 border-[#C84B31] p-3 font-mono font-bold uppercase">
+                [RESERVATION_ERROR] {bookingError}
+              </div>
+            )}
+            {paymentProcessing && (
+              <div className="bg-[#212121] text-white border-2 border-[#C84B31] p-3 font-mono font-bold uppercase text-center animate-pulse">
+                [ AWAITING PAYMENT — DO NOT CLOSE THIS WINDOW ]
+              </div>
+            )}
             <div className="bg-[#F1EDEA] border-2 border-[#212121] p-4 space-y-2">
               <div className="font-bold text-[#C84B31]">Booking Summary</div>
               <div className="flex justify-between text-sm font-bold">
                 <span>{room.title}</span>
-                <span>${room.basePrice * 3 + 120}</span>
+                <span>₹{((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}</span>
               </div>
               <div className="text-[#212121]/70">Location: {room.location}</div>
+              <div className="text-[#212121]/50 text-[10px]">3 nights · incl. cleaning fee</div>
             </div>
 
             <div className="space-y-2">
@@ -425,7 +531,7 @@ export const RoomDetailsPage = () => {
               <input
                 type="email"
                 placeholder="guest@architectural.stay"
-                defaultValue="guest@staywise.ai"
+                defaultValue={user?.email || "guest@staywise.ai"}
                 className="w-full bg-white border-2 border-[#212121] p-2.5 outline-none font-mono text-sm"
               />
             </div>
@@ -435,8 +541,13 @@ export const RoomDetailsPage = () => {
               size="lg"
               className="w-full mt-4"
               onClick={handleConfirmReservation}
+              disabled={isCreatingBooking || paymentProcessing}
             >
-              CONFIRM & PAY
+              {isCreatingBooking
+                ? 'INITIATING...'
+                : paymentProcessing
+                ? 'AWAITING PAYMENT...'
+                : `PAY ₹${((room.basePrice * 3 + 120) * 85).toLocaleString('en-IN')}`}
             </Button>
           </div>
         )}

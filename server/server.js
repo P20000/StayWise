@@ -60,19 +60,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// 4. Mount Payment Routes BEFORE express.json() so Stripe webhook can read express.raw()
-app.use('/api/payments', require('./routes/paymentRoutes'));
-
-// 5. Standard JSON Body Parser for all other API endpoints
+// 4. Standard JSON Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// 6. Mount Core Modular Routes
+// 5. Mount Core Modular Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/rooms', require('./routes/roomRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 // 7. Route Not Found & Centralized JSON Error Handler
 app.use(notFound);

@@ -35,13 +35,17 @@ const bookingSchema = new mongoose.Schema(
     paymentGateway: {
       type: String,
       enum: ['STRIPE', 'RAZORPAY'],
-      default: 'STRIPE',
+      default: 'RAZORPAY',
     },
     stripePaymentIntentId: {
       type: String,
       index: true,
     },
     razorpayOrderId: {
+      type: String,
+      index: true,
+    },
+    razorpayPaymentId: {
       type: String,
       index: true,
     },

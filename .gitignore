@@ -14,6 +14,7 @@ __pycache__/
 *.env
 *.pem
 *.key
+*.csv
 
 # ==========================================
 # Node.js / Full-Stack Dependencies & Build
