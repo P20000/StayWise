@@ -17,6 +17,8 @@ const API_BASE_URL = getApiBaseUrl();
 export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  // Default 30-second timeout prevents silent hangs (e.g. during Cloudinary uploads)
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,8 +32,26 @@ api.interceptors.response.use(
       // Handle unauthorized or expired session gracefully
       console.warn('[AUTH] Session expired or unauthorized.');
     }
+
+    // Translate opaque browser-level network failures into actionable messages.
+    // "Network Error" (no error.response) means the request never reached the server
+    // or the server closed the connection before sending response headers.
+    if (!error.response && error.message === 'Network Error') {
+      error.message =
+        `[SERVER_UNREACHABLE] Cannot connect to the API at ${API_BASE_URL}. ` +
+        'Please ensure the backend server is running (npm run dev in /server) ' +
+        'and that your VITE_API_BASE_URL / CLOUDINARY credentials are correctly configured.';
+    }
+
+    if (error.code === 'ECONNABORTED') {
+      error.message =
+        '[REQUEST_TIMEOUT] The server took too long to respond (>30s). ' +
+        'This may be caused by a slow Cloudinary image upload or an overloaded server.';
+    }
+
     return Promise.reject(error);
   }
 );
 
 export default api;
+

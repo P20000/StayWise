@@ -80,19 +80,33 @@ exports.getRoomBySlug = async (req, res, next) => {
 
 exports.createRoom = async (req, res, next) => {
   try {
-    // Rule #9: Stream memory buffer straight to Cloudinary without writing local file
-    const uploadToCloudinary = (buffer) => {
+    // Rule #9: Stream memory buffer straight to Cloudinary without writing local file.
+    // Wraps upload_stream in a timeout so credential/network failures surface as
+    // structured JSON errors rather than silently closing the TCP connection.
+    const uploadToCloudinary = (buffer, timeoutMs = 30000) => {
       return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('[CLOUDINARY_TIMEOUT] Image upload timed out after 30 seconds. Check Cloudinary credentials and network connectivity.'));
+        }, timeoutMs);
+
         const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: 'staywise_listings',
-            resource_type: 'image',
-          },
+          { folder: 'staywise_listings', resource_type: 'image' },
           (error, result) => {
+            clearTimeout(timer);
             if (result) resolve(result);
-            else reject(error);
+            else {
+              // Cloudinary auth errors return an object with http_code 401
+              const msg = error?.message || 'Unknown Cloudinary error';
+              const code = error?.http_code;
+              reject(new Error(
+                code === 401
+                  ? `[CLOUDINARY_AUTH] Invalid API credentials (HTTP ${code}): ${msg}`
+                  : `[CLOUDINARY_UPLOAD] Upload failed (HTTP ${code || 'N/A'}): ${msg}`
+              ));
+            }
           }
         );
+
         streamifier.createReadStream(buffer).pipe(uploadStream);
       });
     };
@@ -168,18 +182,29 @@ exports.updateRoom = async (req, res, next) => {
       });
     }
 
-    const uploadToCloudinary = (buffer) => {
+    const uploadToCloudinary = (buffer, timeoutMs = 30000) => {
       return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error('[CLOUDINARY_TIMEOUT] Image upload timed out after 30 seconds. Check Cloudinary credentials and network connectivity.'));
+        }, timeoutMs);
+
         const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: 'staywise_listings',
-            resource_type: 'image',
-          },
+          { folder: 'staywise_listings', resource_type: 'image' },
           (error, result) => {
+            clearTimeout(timer);
             if (result) resolve(result);
-            else reject(error);
+            else {
+              const msg = error?.message || 'Unknown Cloudinary error';
+              const code = error?.http_code;
+              reject(new Error(
+                code === 401
+                  ? `[CLOUDINARY_AUTH] Invalid API credentials (HTTP ${code}): ${msg}`
+                  : `[CLOUDINARY_UPLOAD] Upload failed (HTTP ${code || 'N/A'}): ${msg}`
+              ));
+            }
           }
         );
+
         streamifier.createReadStream(buffer).pipe(uploadStream);
       });
     };
