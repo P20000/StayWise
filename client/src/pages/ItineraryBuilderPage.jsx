@@ -6,8 +6,8 @@ export const ItineraryBuilderPage = () => {
     {
       id: 'welcome-msg',
       sender: 'ai',
-      text: `### 👋 Welcome to StayWise AI Assistant!\n\nI am your personal travel and architectural stay advisor, powered by **NVIDIA NIM API**. Whether you are planning a weekend retreat or a multi-country expedition, I can help you with:\n\n* 🏛️ **Curated Architectural Stays:** From Portuguese coastal villas to heritage Kathkunia stone lodges.\n* 🗺️ **Bespoke Itinerary Planning:** Tailored recommendations matching your travel vibe and pace.\n* ✈️ **Practical Travel Insights:** Best times to visit, local culinary gems, and neighborhood guides.\n\n**Where would you like to explore today?**`,
-      thinking: `1. Initialized StayWise AI Assistant interface.\n2. Loaded curated property highlights and regional knowledge base.\n3. Ready to assist user with architectural stays and travel planning.`,
+      text: `### 👋 Welcome to StayWise Concierge!\n\nI am your personal travel and architectural stay advisor. Whether you are planning a weekend retreat or a multi-country expedition, I can help you with:\n\n* 🏛️ **Curated Architectural Stays:** From Portuguese coastal villas to heritage Kathkunia stone lodges.\n* 🗺️ **Bespoke Itinerary Planning:** Tailored recommendations matching your travel vibe and pace.\n* ✈️ **Practical Travel Insights:** Best times to visit, local culinary gems, and neighborhood guides.\n\n**Where would you like to explore today?**`,
+      thinking: `1. Connected with StayWise curated travel registry.\n2. Retrieved regional guides and property architectural portfolios.\n3. Ready to tailor your travel plans and accommodations.`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -77,11 +77,11 @@ export const ItineraryBuilderPage = () => {
         throw new Error(data.message || 'Unexpected AI response format');
       }
     } catch (err) {
-      console.error('[AI_CHAT] Error communicating with StayWise AI:', err);
+      console.error('[CONCIERGE] Error communicating with StayWise Concierge:', err);
       const errorMessage = {
         id: `err-${Date.now()}`,
         sender: 'ai',
-        text: `### ✨ StayWise Assistant Tip\n\nI'm having trouble connecting to the live AI engine right now, but I can still recommend looking into our **Explore Page** for curated stays across Goa, Kochi, and Europe!\n\n*(Error details: ${err.message || 'Network Timeout'})*`,
+        text: `### ✨ StayWise Concierge Tip\n\nI'm having trouble connecting to the StayWise Concierge service right now, but you can explore our curated collection of architectural stays on our **Explore Page**!\n\n*(Connection details: ${err.message || 'Network Timeout'})*`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -102,7 +102,7 @@ export const ItineraryBuilderPage = () => {
       {
         id: `welcome-${Date.now()}`,
         sender: 'ai',
-        text: `### 👋 StayWise AI Assistant Reset\n\nHow else can I assist you with your architectural stays or travel plans today?`,
+        text: `### 👋 StayWise Concierge Reset\n\nHow else can I assist you with your architectural stays or travel plans today?`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -158,14 +158,14 @@ export const ItineraryBuilderPage = () => {
         <div className="bg-[#212121] text-[#F1EDEA] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b-4 border-[#212121]">
           <div className="flex items-center gap-3">
             <div className="bg-[#C84B31] text-[#F1EDEA] font-mono text-xl font-extrabold px-3 py-1 border-2 border-[#F1EDEA] shadow-[3px_3px_0px_#F1EDEA]">
-              AI CHAT
+              CONCIERGE
             </div>
             <div>
               <h1 className="font-mono text-xl md:text-2xl font-black uppercase tracking-wider text-[#F1EDEA] m-0">
-                StayWise AI Assistant
+                StayWise Concierge
               </h1>
               <p className="font-mono text-xs text-[#F1EDEA]/80 m-0 uppercase tracking-widest">
-                Architectural Stays &bull; Curated Travel Engine
+                Architectural Stays &bull; Curated Stays & Experiences
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export const ItineraryBuilderPage = () => {
           <div className="flex items-center gap-3">
             <span className="bg-[#F1EDEA] text-[#212121] font-mono text-xs font-bold px-3 py-1 border-2 border-[#212121] flex items-center gap-1.5 shadow-[2px_2px_0px_#C84B31]">
               <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-              NVIDIA NIM ACTIVE
+              CONCIERGE ONLINE
             </span>
             <button
               onClick={clearChat}
@@ -211,7 +211,7 @@ export const ItineraryBuilderPage = () => {
             >
               <div className="flex items-center gap-2 mb-1 px-1">
                 <span className="font-mono text-xs font-extrabold uppercase tracking-wide text-[#212121]">
-                  {msg.sender === 'user' ? '👤 You' : '🤖 StayWise AI'}
+                  {msg.sender === 'user' ? '👤 You' : '🛎️ StayWise Concierge'}
                 </span>
                 <span className="font-mono text-[10px] text-gray-500">{msg.timestamp}</span>
               </div>
@@ -230,7 +230,7 @@ export const ItineraryBuilderPage = () => {
                         className="w-full flex items-center justify-between font-mono text-xs font-bold uppercase tracking-wider text-[#212121] hover:text-[#C84B31] transition-colors"
                       >
                         <span className="flex items-center gap-1.5">
-                          🧠 AI Reasoning & Strategy Process
+                          💭 Curator Insights & Strategy
                         </span>
                         <span>{expandedReasoning[msg.id] ? '▲ HIDE' : '▼ VIEW'}</span>
                       </button>
@@ -255,13 +255,13 @@ export const ItineraryBuilderPage = () => {
             <div className="flex flex-col items-start">
               <div className="flex items-center gap-2 mb-1 px-1">
                 <span className="font-mono text-xs font-extrabold uppercase tracking-wide text-[#212121]">
-                  🤖 StayWise AI
+                  🛎️ StayWise Concierge
                 </span>
               </div>
               <div className="bg-white border-2 border-[#212121] shadow-[4px_4px_0px_#C84B31] px-5 py-3.5 flex items-center gap-3">
                 <span className="w-2.5 h-2.5 bg-[#C84B31] animate-ping rounded-full"></span>
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#212121]">
-                  Analyzing Destinations & Crafting Itinerary...
+                  Consulting Local Guides & Tailoring Your Stay...
                 </span>
               </div>
             </div>
