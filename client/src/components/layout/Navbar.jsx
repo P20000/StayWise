@@ -57,13 +57,22 @@ export const Navbar = () => {
             </Link>
           )}
           {!(isAuthenticated && user?.role === 'Vendor') && (
-            <Link
-              to="/recommender"
-              className="text-[#212121] hover:text-[#C84B31] transition-colors py-1 flex items-center gap-1"
-            >
-              <span>AI Picks</span>
-              <span className="text-[10px]" role="img" aria-label="Sparkles">✨</span>
-            </Link>
+            <>
+              <Link
+                to="/recommender"
+                className="text-[#212121] hover:text-[#C84B31] transition-colors py-1 flex items-center gap-1"
+              >
+                <span>AI Picks</span>
+                <span className="text-[10px]" role="img" aria-label="Sparkles">✨</span>
+              </Link>
+              <Link
+                to="/ai-chat"
+                className="bg-[#212121] text-[#F1EDEA] hover:bg-[#C84B31] transition-colors px-2.5 py-1 border border-[#212121] shadow-[2px_2px_0px_#C84B31] flex items-center gap-1.5 font-bold no-underline"
+              >
+                <span>AI Chat</span>
+                <span className="text-[10px]" role="img" aria-label="Chat">💬</span>
+              </Link>
+            </>
           )}
           {isAuthenticated && user?.role === 'Vendor' && (
             <>

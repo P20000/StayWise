@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUser } from './store/slices/authSlice';
 import api from './services/api';
@@ -13,10 +13,13 @@ import { VendorSetupPage } from './pages/VendorSetupPage';
 import { VendorDashboardPage } from './pages/VendorDashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AIPicksPage } from './pages/AIPicksPage';
+import { ItineraryBuilderPage } from './pages/ItineraryBuilderPage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export const App = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
+  const isAiChat = location.pathname === '/itinerary-builder' || location.pathname === '/ai-chat';
 
   useEffect(() => {
     const checkSession = async () => {
@@ -40,6 +43,8 @@ export const App = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/recommender" element={<AIPicksPage />} />
+          <Route path="/itinerary-builder" element={<ItineraryBuilderPage />} />
+          <Route path="/ai-chat" element={<ItineraryBuilderPage />} />
           <Route path="/room/:slug" element={<RoomDetailsPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route
@@ -61,7 +66,7 @@ export const App = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
-      <Footer />
+      {!isAiChat && <Footer />}
     </div>
   );
 };

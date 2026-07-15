@@ -34,9 +34,9 @@ app.use(
       // Allow requests with no origin (like mobile apps, curl, or postman)
       if (!origin) return callback(null, true);
       
-      const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin) || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+      const isLocalhostOrLan = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
       
-      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com') || isLocalhost) {
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com') || isLocalhostOrLan) {
         return callback(null, true);
       }
       
@@ -71,6 +71,8 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/itinerary', require('./routes/itineraryRoutes'));
+app.use('/api/chat', require('./routes/itineraryRoutes'));
 
 // 7. Route Not Found & Centralized JSON Error Handler
 app.use(notFound);
